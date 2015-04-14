@@ -1,97 +1,8 @@
-CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_ft_catalog()
-    RETURNS VOID AS
-    $BODY$
-    DECLARE
-        r RECORD;
-    BEGIN
-        FOR r IN
-        WITH table_list AS (
-                SELECT
-                    table_list.table_name,
-                    table_list.table_def
-                FROM
-                    (
-                        VALUES
-                            (
-                                $$pg_attribute$$,
-                                $$ attrelid oid,
-                                                attname name,
-                                                atttypid oid,
-                                                attstattarget integer,
-                                                attlen smallint,
-                                                attnum smallint,
-                                                attndims integer,
-                                                attcacheoff integer,
-                                                atttypmod integer,
-                                                attbyval boolean,
-                                                attstorage "char",
-                                                attalign "char",
-                                                attnotnull boolean,
-                                                atthasdef boolean,
-                                                attisdropped boolean,
-                                                attislocal boolean,
-                                                attinhcount integer,
-                                                attcollation oid,
-                                                attacl aclitem[],
-                                                attoptions text[],
-                                                attfdwoptions text[]$$
-                            ),
-                            (
-                                $$pg_class$$,
-                                $$  "oid" oid,
-                                             relname name,
-                                             relnamespace oid,
-                                             reltype oid,
-                                             reloftype oid,
-                                             relowner oid,
-                                             relam oid,
-                                             relfilenode oid,
-                                             reltablespace oid,
-                                             relpages integer,
-                                             reltuples real,
-                                             relallvisible integer,
-                                             reltoastrelid oid,
-                                             reltoastidxid oid,
-                                             relhasindex boolean,
-                                             relisshared boolean,
-                                             relpersistence "char",
-                                             relkind "char"$$
-                            ),
-                            (
-                                $$pg_namespace$$,
-                                $$ "oid" oid,
-                                                nspname name$$
-                            ),
-                            (
-                                $$pg_indexes$$,
-                                $$ schemaname name,
-                                              tablename name,
-                                              indexname name,
-                                              indexdef text $$)
-                    ) AS table_list (table_name, table_def)
-        )
-        SELECT
-            format(
-                    $$ CREATE FOREIGN TABLE openclinica_fdw.ft_%1$s (%2$s)
-                       SERVER openclinica_fdw_server OPTIONS ( schema_name
-                       'pg_catalog', table_name %1$L, updatable 'false' ); $$,
-                    table_list.table_name,
-                    table_list.table_def
-            ) AS create_statements
-        FROM
-            table_list
-        LOOP
-            EXECUTE r.create_statements;
-        END LOOP;
-    END
-    $BODY$
-LANGUAGE plpgsql VOLATILE;
-
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_ft_openclinica(
-    foreign_openclinica_schema_name TEXT DEFAULT $$public$$
+  foreign_openclinica_schema_name TEXT DEFAULT $$public$$
 )
-    RETURNS VOID AS
-    $BODY$
+  RETURNS VOID AS
+  $BODY$
     DECLARE
         r RECORD;
     BEGIN
@@ -151,8 +62,8 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_ft_openclinica(
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_ft_openclinica_matviews()
-    RETURNS VOID AS
-    $BODY$
+  RETURNS VOID AS
+  $BODY$
     DECLARE
         r RECORD;
     BEGIN
@@ -190,10 +101,10 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_ft_openclinica_matviews()
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_ft_openclinica_matview_indexes(
-    foreign_openclinica_schema_name TEXT DEFAULT $$public$$
+  foreign_openclinica_schema_name TEXT DEFAULT $$public$$
 )
-    RETURNS VOID AS
-    $BODY$
+  RETURNS VOID AS
+  $BODY$
     DECLARE
         r RECORD;
         foreign_openclinica_schema_name ALIAS FOR foreign_openclinica_schema_name;
@@ -239,8 +150,8 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_ft_openclinica_matview_inde
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_response_sets()
-    RETURNS VOID AS
-    $BODY$
+  RETURNS VOID AS
+  $BODY$
     BEGIN
         EXECUTE $query$
     CREATE MATERIALIZED VIEW dm.response_sets AS
@@ -379,8 +290,8 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_response_sets()
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_metadata()
-    RETURNS VOID AS
-    $BODY$
+  RETURNS VOID AS
+  $BODY$
     BEGIN
         EXECUTE $query$
     CREATE MATERIALIZED VIEW dm.metadata AS
@@ -727,8 +638,8 @@ FROM
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_metadata_event_crf_ig()
-    RETURNS VOID AS
-    $BODY$
+  RETURNS VOID AS
+  $BODY$
     BEGIN
         EXECUTE $query$
     CREATE MATERIALIZED VIEW dm.metadata_event_crf_ig AS
@@ -770,8 +681,8 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_metadata_event_crf_ig()
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_metadata_crf_ig_item()
-    RETURNS VOID AS
-    $BODY$
+  RETURNS VOID AS
+  $BODY$
     BEGIN
         EXECUTE $query$
     CREATE MATERIALIZED VIEW dm.metadata_crf_ig_item AS
@@ -831,8 +742,8 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_metadata_crf_ig_item()
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_metadata_study()
-    RETURNS VOID AS
-    $BODY$
+  RETURNS VOID AS
+  $BODY$
     BEGIN
         EXECUTE $query$
     CREATE MATERIALIZED VIEW dm.metadata_study AS
@@ -851,8 +762,8 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_metadata_study()
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_clinicaldata()
-    RETURNS VOID AS
-    $BODY$
+  RETURNS VOID AS
+  $BODY$
     BEGIN
         EXECUTE $query$
     CREATE MATERIALIZED VIEW dm.clinicaldata AS
@@ -1389,8 +1300,8 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_clinicaldata()
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_subjects()
-    RETURNS VOID AS
-    $BODY$
+  RETURNS VOID AS
+  $BODY$
     BEGIN
         EXECUTE $query$
     CREATE MATERIALIZED VIEW dm.subjects AS
@@ -1486,8 +1397,8 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_subjects()
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_subject_event_crf_status()
-    RETURNS VOID AS
-    $BODY$
+  RETURNS VOID AS
+  $BODY$
     BEGIN
         EXECUTE $query$
     CREATE MATERIALIZED VIEW dm.subject_event_crf_status AS
@@ -1742,8 +1653,8 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_subject_event_crf_status
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_subject_event_crf_expected()
-    RETURNS VOID AS
-    $BODY$
+  RETURNS VOID AS
+  $BODY$
     BEGIN
         EXECUTE $query$
     CREATE MATERIALIZED VIEW dm.subject_event_crf_expected AS
@@ -1781,8 +1692,8 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_subject_event_crf_expect
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_subject_event_crf_join()
-    RETURNS VOID AS
-    $BODY$
+  RETURNS VOID AS
+  $BODY$
     BEGIN
         EXECUTE $query$
     CREATE MATERIALIZED VIEW dm.subject_event_crf_join AS
@@ -1851,8 +1762,8 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_subject_event_crf_join()
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_discrepancy_notes_all()
-    RETURNS VOID AS
-    $BODY$
+  RETURNS VOID AS
+  $BODY$
     BEGIN
         EXECUTE $query$
     CREATE MATERIALIZED VIEW dm.discrepancy_notes_all AS
@@ -2012,8 +1923,8 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_discrepancy_notes_all()
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_discrepancy_notes_parent()
-    RETURNS VOID AS
-    $BODY$
+  RETURNS VOID AS
+  $BODY$
     BEGIN
         EXECUTE $query$
     CREATE MATERIALIZED VIEW dm.discrepancy_notes_parent AS
@@ -2105,8 +2016,8 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_discrepancy_notes_parent
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_subject_groups()
-    RETURNS VOID AS
-    $BODY$
+  RETURNS VOID AS
+  $BODY$
     BEGIN
         EXECUTE $query$
     CREATE MATERIALIZED VIEW dm.subject_groups AS
@@ -2138,8 +2049,8 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_subject_groups()
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_response_set_labels()
-    RETURNS VOID AS
-    $BODY$
+  RETURNS VOID AS
+  $BODY$
     BEGIN
         EXECUTE $query$
     CREATE MATERIALIZED VIEW dm.response_set_labels AS
@@ -2180,8 +2091,8 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_response_set_labels()
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_user_account_roles()
-    RETURNS VOID AS
-    $BODY$
+  RETURNS VOID AS
+  $BODY$
     BEGIN
         EXECUTE $query$
     CREATE MATERIALIZED VIEW dm.user_account_roles AS
@@ -2264,8 +2175,8 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_user_account_roles()
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_sdv_status_history()
-    RETURNS VOID AS
-    $BODY$
+  RETURNS VOID AS
+  $BODY$
     BEGIN
         EXECUTE $query$
     CREATE MATERIALIZED VIEW dm.sdv_status_history AS
@@ -2369,11 +2280,11 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_sdv_status_history()
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_study_schemas(
-    filter_study_name TEXT DEFAULT $$$$,
-    create_or_drop    TEXT DEFAULT $$create$$
+  filter_study_name TEXT DEFAULT $$$$,
+  create_or_drop    TEXT DEFAULT $$create$$
 )
-    RETURNS TEXT AS
-    $BODY$
+  RETURNS TEXT AS
+  $BODY$
     DECLARE
         r RECORD;
     BEGIN
@@ -2424,9 +2335,9 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_study_schemas(
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_study_common_matviews(
-    filter_study_name TEXT DEFAULT $$$$)
-    RETURNS TEXT AS
-    $BODY$
+  filter_study_name TEXT DEFAULT $$$$)
+  RETURNS TEXT AS
+  $BODY$
     DECLARE r RECORD;
     BEGIN
         FOR r IN
@@ -2497,11 +2408,11 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_study_common_matviews(
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_study_itemgroup_matviews(
-    alias_views          BOOLEAN DEFAULT FALSE,
-    filter_study_name    TEXT DEFAULT $$$$ :: TEXT,
-    filter_itemgroup_oid TEXT DEFAULT $$$$ :: TEXT)
-    RETURNS TEXT AS
-    $BODY$
+  alias_views          BOOLEAN DEFAULT FALSE,
+  filter_study_name    TEXT DEFAULT $$$$ :: TEXT,
+  filter_itemgroup_oid TEXT DEFAULT $$$$ :: TEXT)
+  RETURNS TEXT AS
+  $BODY$
     DECLARE
         r RECORD;
     BEGIN
@@ -2835,10 +2746,10 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_study_itemgroup_matviews(
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_study_role(
-    filter_study_name TEXT DEFAULT $$$$
+  filter_study_name TEXT DEFAULT $$$$
 )
-    RETURNS TEXT AS
-    $BODY$
+  RETURNS TEXT AS
+  $BODY$
     DECLARE
         r              RECORD;
         study_username VARCHAR;
@@ -2888,10 +2799,10 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_study_role(
 
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_grant_study_schema_access_to_study_role(
-    filter_study_name TEXT DEFAULT $$$$
+  filter_study_name TEXT DEFAULT $$$$
 )
-    RETURNS TEXT AS
-    $BODY$
+  RETURNS TEXT AS
+  $BODY$
     DECLARE
         r              RECORD;
         study_username VARCHAR;
@@ -2947,10 +2858,10 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_grant_study_schema_access_to_study
 
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_clean_name_string(
-    name_string TEXT
+  name_string TEXT
 )
-    RETURNS TEXT AS
-    $BODY$
+  RETURNS TEXT AS
+  $BODY$
     SELECT
         lower(
                 regexp_replace(
@@ -2968,11 +2879,11 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_clean_name_string(
     $BODY$ LANGUAGE SQL STABLE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_refresh_matview(
-    schemaname  TEXT,
-    matviewname TEXT
+  schemaname  TEXT,
+  matviewname TEXT
 )
-    RETURNS TEXT AS
-    $BODY$
+  RETURNS TEXT AS
+  $BODY$
     DECLARE r RECORD;
     BEGIN
         FOR r IN
@@ -2991,8 +2902,8 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_refresh_matview(
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_users_new_oc_user_new_login_role()
-    RETURNS TEXT AS
-    $BODY$
+  RETURNS TEXT AS
+  $BODY$
     DECLARE r RECORD;
     BEGIN
         FOR r IN
@@ -3046,8 +2957,8 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_users_new_oc_user_new_login_role()
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_users_removed_oc_user_alter_role_nologin()
-    RETURNS TEXT AS
-    $BODY$
+  RETURNS TEXT AS
+  $BODY$
     DECLARE r RECORD;
     BEGIN
         FOR r IN
@@ -3101,8 +3012,8 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_users_removed_oc_user_alter_role_n
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_users_restored_oc_user_alter_role_login()
-    RETURNS TEXT AS
-    $BODY$
+  RETURNS TEXT AS
+  $BODY$
     DECLARE r RECORD;
     BEGIN
         FOR r IN
@@ -3158,8 +3069,8 @@ LANGUAGE plpgsql VOLATILE;
 
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_users_available_role_oc_user_grant_to_role()
-    RETURNS TEXT AS
-    $BODY$
+  RETURNS TEXT AS
+  $BODY$
     DECLARE r RECORD;
     BEGIN
         FOR r IN
@@ -3227,8 +3138,8 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_users_available_role_oc_user_grant
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_users_removed_role_oc_user_revoke_from_role()
-    RETURNS TEXT AS
-    $BODY$
+  RETURNS TEXT AS
+  $BODY$
     DECLARE r RECORD;
     BEGIN
         FOR r IN
@@ -3295,8 +3206,8 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_users_removed_role_oc_user_revoke_
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_drop_study_schema_having_new_definitions()
-    RETURNS TEXT AS
-    $BODY$
+  RETURNS TEXT AS
+  $BODY$
     DECLARE r RECORD;
     BEGIN
         FOR r IN
@@ -3333,10 +3244,10 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_drop_study_schema_having_new_defin
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION openclinica_fdw.dm_reassign_owner_study_matviews(
-    to_role TEXT DEFAULT $$dm_admin$$
+  to_role TEXT DEFAULT $$dm_admin$$
 )
-    RETURNS TEXT AS
-    $BODY$
+  RETURNS TEXT AS
+  $BODY$
     DECLARE r RECORD;
     BEGIN
         FOR r IN
@@ -3365,13 +3276,13 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_reassign_owner_study_matviews(
 LANGUAGE plpgsql VOLATILE;
 
 CREATE OR REPLACE FUNCTION public.dm_snapshot_code_sas(
-    filter_study_name_schema     TEXT,
-    outputdir                    TEXT,
-    odbc_string_or_file_dsn_path TEXT,
-    data_filter_string           TEXT DEFAULT $$$$
+  filter_study_name_schema     TEXT,
+  outputdir                    TEXT,
+  odbc_string_or_file_dsn_path TEXT,
+  data_filter_string           TEXT DEFAULT $$$$
 )
-    RETURNS SETOF TEXT AS
-    $BODY$
+  RETURNS SETOF TEXT AS
+  $BODY$
     DECLARE r RECORD;
     BEGIN
         RETURN QUERY
@@ -3445,13 +3356,13 @@ CREATE OR REPLACE FUNCTION public.dm_snapshot_code_sas(
 LANGUAGE plpgsql STABLE;
 
 CREATE OR REPLACE FUNCTION public.dm_snapshot_code_stata(
-    filter_study_name_schema     TEXT,
-    outputdir                    TEXT,
-    odbc_string_or_file_dsn_path TEXT,
-    data_filter_string           TEXT DEFAULT $$$$
+  filter_study_name_schema     TEXT,
+  outputdir                    TEXT,
+  odbc_string_or_file_dsn_path TEXT,
+  data_filter_string           TEXT DEFAULT $$$$
 )
-    RETURNS SETOF TEXT AS
-    $BODY$
+  RETURNS SETOF TEXT AS
+  $BODY$
     DECLARE r RECORD;
     BEGIN
         RETURN QUERY
