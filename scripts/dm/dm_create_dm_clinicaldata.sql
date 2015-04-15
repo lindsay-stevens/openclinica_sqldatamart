@@ -1,536 +1,384 @@
-CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_clinicaldata()
-  RETURNS VOID AS
-  $BODY$
+CREATE OR REPLACE FUNCTION dm_create_dm_clinicaldata()
+    RETURNS VOID AS
+    $BODY$
     BEGIN
         EXECUTE $query$
     CREATE MATERIALIZED VIEW dm.clinicaldata AS
-    WITH status_filter AS (
-            SELECT
-                status.status_id,
-                status.name
-            FROM
-                openclinica_fdw.status
-            WHERE
-                status.name
-                NOT IN ($$removed$$, $$auto-removed$$)
-    ), user_id_name AS (
-    SELECT user_account.user_id, user_account.user_name
-        FROM openclinica_fdw.user_account
-    ), study_details AS (
-    SELECT
-        COALESCE(
-                parent_study.oc_oid,
-                study.oc_oid,
-                $$no parent study$$) AS study_oid,
-        COALESCE(
-                parent_study.name,
-                study.name,
-                $$no parent study$$) AS study_name,
-        COALESCE(
-                parent_study.study_id,
-                study.study_id) AS   study_id,
-        study.oc_oid                 AS site_oid,
-        study.name                   AS site_name,
-        study.study_id as site_id
-    FROM
-        openclinica_fdw.study
-        LEFT JOIN
-        (
-            SELECT
-                study.study_id,
-                study.oc_oid,
-                study.name
-            FROM
-                openclinica_fdw.study
-                INNER JOIN
-                status_filter AS status_pstudy
-                    ON status_pstudy.status_id = study.status_id
-        ) AS parent_study
-            ON parent_study.study_id = study.parent_study_id
-        INNER JOIN
-        status_filter AS status_study
-            ON status_study.status_id = study.status_id      
-    ), subject_details AS (
-            SELECT
-                ss.study_subject_id   AS study_subject_id_seq,
-                ss.label              AS subject_id,
-                ss.secondary_label    AS subject_secondary_label,
-                ss.subject_id         AS subject_id_seq,
-                ss.study_id           AS subject_study_id,
-                ss.enrollment_date    AS subject_enrol_date,
-                ss.date_created       AS subject_date_created,
-                ss.date_updated       AS subject_date_updated,
-                ua_ss_o.user_name     AS subject_created_by,
-                ua_ss_u.user_name     AS subject_updated_by,
-                ss.oc_oid             AS subject_oid,
-                sub.date_of_birth     AS subject_date_of_birth,
-                sub.gender            AS subject_sex,
-                sub.unique_identifier AS subject_person_id,
-                status_ss.name        AS subject_status
-            FROM
-                openclinica_fdw.study_subject AS ss
-                INNER JOIN
-                openclinica_fdw.subject AS sub
-                    ON ss.subject_id = sub.subject_id
-                INNER JOIN
-                status_filter AS status_ss
-                    ON ss.status_id = status_ss.status_id
-                INNER JOIN
-                user_id_name AS ua_ss_o
-                    ON ss.owner_id = ua_ss_o.user_id
-                LEFT JOIN
-                user_id_name AS ua_ss_u
-                    ON ss.owner_id = ua_ss_u.user_id
-    ), event_details AS (
-            SELECT
-                se.study_event_id             AS study_event_id_seq,
-                se.study_subject_id           AS event_study_subject_id_seq,
-                se.location                   AS event_location,
-                se.sample_ordinal             AS event_repeat,
-                se.date_start                 AS event_date_start,
-                se.date_end                   AS event_date_end,
-                ses.name                      AS event_status,
-                status_se.name                AS event_status_internal,
-                se.date_created               AS event_date_created,
-                se.date_updated               AS event_date_updated,
-                ua_se_o.user_name             AS event_created_by,
-                ua_se_u.user_name             AS event_updated_by,
-                sed.study_event_definition_id AS study_event_definition_id_seq,
-                sed.oc_oid                    AS event_oid,
-                sed.name                      AS event_name,
-                sed.ordinal                   AS event_order
-            FROM
-                openclinica_fdw.study_event AS se
-                INNER JOIN
-                openclinica_fdw.study_event_definition AS sed
-                    ON sed.study_event_definition_id = se.study_event_definition_id
-                INNER JOIN
-                openclinica_fdw.subject_event_status AS ses
-                    ON ses.subject_event_status_id = se.subject_event_status_id
-                INNER JOIN
-                status_filter AS status_se
-                    ON se.status_id = status_se.status_id
-                INNER JOIN
-                user_id_name AS ua_se_o
-                    ON se.owner_id = ua_se_o.user_id
-                LEFT JOIN
-                user_id_name AS ua_se_u
-                    ON se.update_id = ua_se_u.user_id
-    ), crf_details AS (
-            WITH ec_ale_sdv AS (
-                    SELECT
-                        ale.event_crf_id,
-                        max(
-                                ale.audit_date) AS audit_date
-                    FROM
-                        openclinica_fdw.audit_log_event AS ale
-                        INNER JOIN
-                        openclinica_fdw.audit_log_event_type AS alet
-                            ON alet.audit_log_event_type_id =
-                            ale.audit_log_event_type_id
-                    WHERE
-                        ale.event_crf_id IS NOT NULL
-                        AND alet.name = $$EventCRF SDV Status$$
-                    GROUP BY
-                        ale.event_crf_id
-            )
-            SELECT
-                crf.crf_id                     AS crf_id_seq,
-                crf.oc_oid                     AS crf_parent_oid,
-                crf.name                       AS crf_parent_name,
-                cv.crf_version_id              AS crf_version_id_seq,
-                cv.oc_oid                      AS crf_version_oid,
-                cv.name                        AS crf_version_name,
-                ec.event_crf_id                AS event_crf_id_seq,
-                ec.study_event_id              AS crf_study_event_id_seq,
-                ec.date_interviewed            AS crf_date_interviewed,
-                ec.interviewer_name            AS crf_interviewer_name,
-                ec.date_completed              AS crf_date_completed,
-                ec.date_validate               AS crf_date_validate,
-                ua_ec_v.user_name              AS crf_validated_by,
-                ec.date_validate_completed     AS crf_date_validate_completed,
-                ec.electronic_signature_status AS crf_esignature_status,
-                ec.sdv_status                  AS crf_sdv_status,
-                ec_ale_sdv.audit_date          AS crf_sdv_status_last_updated,
-                ua_ec_s.user_name              AS crf_sdv_status_last_updated_by,
-                ec.date_created                AS crf_date_created,
-                ec.date_updated                AS crf_date_updated,
-                ua_ec_o.user_name              AS crf_created_by,
-                ua_ec_u.user_name              AS crf_updated_by,
+        WITH multi_split AS (
+                SELECT
+                    id.item_data_id,
+                    regexp_split_to_table(
+                            id.value,
+                            $$,$$) AS split_value
+                FROM
+                    openclinica_fdw.item_data AS id
+                    INNER JOIN
+                    openclinica_fdw.event_crf AS ec
+                        ON ec.event_crf_id = id.event_crf_id
+                    INNER JOIN
+                    openclinica_fdw.item_form_metadata AS ifm
+                        ON ifm.crf_version_id = ec.crf_version_id
+                           AND ifm.item_id = id.item_id
+                    INNER JOIN
+                    openclinica_fdw.response_set AS rs
+                        ON rs.response_set_id = ifm.response_set_id
+                           AND rs.version_id = ifm.crf_version_id
+                    INNER JOIN
+                    openclinica_fdw.response_type AS rt
+                        ON rt.response_type_id = rs.response_type_id
+                WHERE
+                    id.status_id NOT IN (5, 7)
+                    AND rt.name IN ('checkbox', 'multi-select')
+        ), ec_ale_sdv AS (
+                SELECT
+                    ale.event_crf_id,
+                    max(
+                            ale.audit_date) AS audit_date
+                FROM
+                    openclinica_fdw.audit_log_event AS ale
+                WHERE
+                    ale.event_crf_id IS NOT NULL
+                    AND ale.audit_log_event_type_id = 32 -- event crf sdv status
+                GROUP BY
+                    ale.event_crf_id
+        )
+        SELECT
+            COALESCE(
+                    parents.name,
+                    study.name,
+                    'no parent study')    AS study_name,
+            study.oc_oid                  AS site_oid,
+            study.name                    AS site_name,
+            sub.unique_identifier         AS subject_person_id,
+            ss.oc_oid                     AS subject_oid,
+            ss.label                      AS subject_id,
+            ss.study_subject_id,
+            ss.secondary_label            AS subject_secondary_label,
+            sub.date_of_birth             AS subject_date_of_birth,
+            sub.gender                    AS subject_sex,
+            sub.subject_id                AS subject_id_seq,
+            ss.enrollment_date            AS subject_enrol_date,
+            sub.unique_identifier         AS person_id,
+            ss.owner_id                   AS ss_owner_id,
+            ss.update_id                  AS ss_update_id,
+            sed.oc_oid                    AS event_oid,
+            sed.ordinal                   AS event_order,
+            sed.name                      AS event_name,
+            se.study_event_id,
+            se.sample_ordinal             AS event_repeat,
+            se.date_start                 AS event_start,
+            se.date_end                   AS event_end,
+            ses.name                      AS event_status,
+            se.owner_id                   AS se_owner_id,
+            se.update_id                  AS se_update_id,
+            crf.oc_oid                    AS crf_parent_oid,
+            crf.name                      AS crf_parent_name,
+            cv.name                       AS crf_version,
+            cv.oc_oid                     AS crf_version_oid,
+            edc.required_crf              AS crf_is_required,
+            edc.double_entry              AS crf_is_double_entry,
+            edc.hide_crf                  AS crf_is_hidden,
+            edc.null_values               AS crf_null_values,
+            edc.status_id                 AS edc_status_id,
+            ec.event_crf_id,
+            ec.date_created               AS crf_date_created,
+            ec.date_updated               AS crf_last_update,
+            ec.date_completed             AS crf_date_completed,
+            ec.date_validate              AS crf_date_validate,
+            ec.date_validate_completed    AS crf_date_validate_completed,
+            ec.owner_id                   AS ec_owner_id,
+            ec.update_id                  AS ec_update_id,
+            CASE
+            WHEN ses.subject_event_status_id IN
+                 (5, 6, 7) --stopped,skipped,locked
+            THEN 'locked'
+            WHEN cv.status_id <> 1 --available
+            THEN 'locked'
+            WHEN ec.status_id = 1 --available
+            THEN 'initial data entry'
+            WHEN ec.status_id = 2 --unavailable
+            THEN
                 CASE
-                WHEN ses.name IN
-                    ($$stopped$$, $$skipped$$, $$locked$$)
-                THEN $$locked$$
-                WHEN status_cv.name <> $$available$$
-                THEN $$locked$$
-                WHEN status_ec.name = $$available$$
-                THEN $$initial data entry$$
-                WHEN status_ec.name = $$unavailable$$
-                THEN
-                    CASE
-                    WHEN edc.double_entry = TRUE
-                    THEN $$validation completed$$
-                    WHEN edc.double_entry = FALSE
-                    THEN $$data entry complete$$
-                    ELSE $$unhandled$$
-                    END
-                WHEN status_ec.name = $$pending$$
-                THEN
-                    CASE
-                    WHEN ec.validator_id <>
-                        0 /* default zero, blank if event_crf created by insertaction */
-                    THEN $$double data entry$$
-                    WHEN ec.validator_id =
-                        0 /* default value present means non-dde run done */
-                    THEN $$initial data entry complete$$
-                    ELSE $$unhandled$$
-                    END
-                ELSE status_ec.name
-                END                            AS crf_status,
-                status_ec.name                 AS crf_status_internal,
-                edc.study_id                   AS edc_study_id
-            FROM
-                openclinica_fdw.event_crf AS ec
-                INNER JOIN
-                openclinica_fdw.crf_version AS cv
-                    ON cv.crf_version_id = ec.crf_version_id
-                INNER JOIN
-                openclinica_fdw.crf
-                    ON crf.crf_id = cv.crf_id
-                INNER JOIN
-                openclinica_fdw.study_event AS se
-                    ON ec.study_event_id = se.study_event_id
-                INNER JOIN
-                openclinica_fdw.subject_event_status AS ses
-                    ON ses.subject_event_status_id = se.subject_event_status_id
-                INNER JOIN
-                openclinica_fdw.event_definition_crf AS edc
-                    ON edc.crf_id = cv.crf_id
-                    AND edc.study_event_definition_id =
-                        se.study_event_definition_id
-                INNER JOIN
-                status_filter AS status_ec
-                    ON ec.status_id = status_ec.status_id
-                INNER JOIN
-                status_filter AS status_cv
-                    ON cv.status_id = status_cv.status_id
-                INNER JOIN
-                user_id_name AS ua_ec_o
-                    ON ec.owner_id = ua_ec_o.user_id
-                LEFT JOIN
-                user_id_name AS ua_ec_u
-                    ON ec.update_id = ua_ec_u.user_id
-                LEFT JOIN
-                user_id_name AS ua_ec_v
-                    ON ec.validator_id = ua_ec_v.user_id
-                LEFT JOIN
-                ec_ale_sdv
-                    ON ec_ale_sdv.event_crf_id = ec.event_crf_id
-                LEFT JOIN
-                user_id_name AS ua_ec_s
-                    ON ec.sdv_update_id = ua_ec_s.user_id
-                    AND ec.sdv_status = TRUE
-    ), response_sets AS (
-            WITH response_type_filter AS (
-    
-                    SELECT
-                        response_type.response_type_id,
-                        response_type.name
-                    FROM
-                        response_type
-                    WHERE
-                        response_type.name IN
-                        ($$checkbox$$, $$radio$$, $$single-select$$, $$multi-select$$)
-            )
-            SELECT
-                rs_opt_value_min.version_id,
-                rs_opt_value_min.response_set_id,
-                rs_opt_value_min.label,
-                rs_opt_text.option_text,
-                rs_opt_value_min.option_value,
-                rs_opt_value_min.option_order
-            FROM
-                (
-                    SELECT
-                        version_id,
-                        response_set_id,
-                        label,
-                        replace(
-                                option_text,
-                                $$##@##@##$$,
-                                $$,$$
-                        ) AS option_text,
-                        option_order
-                    FROM
-                        (
-                            SELECT
-                                version_id,
-                                response_set_id,
-                                label,
-                                trim(
-                                        BOTH
-                                        FROM
-                                        (
-                                            option_text_array [
-                                            option_order
-                                            ]
-                                        )
-                                ) AS option_text,
-                                option_order
-                            FROM
-                                (
-                                    SELECT
-                                        version_id,
-                                        response_set_id,
-                                        label,
-                                        option_text_array,
-                                        generate_subscripts(
-                                                option_text_array,
-                                                1
-                                        ) AS option_order
-                                    FROM
-                                        (
-                                            SELECT
-                                                version_id,
-                                                response_set_id,
-                                                label,
-                                                string_to_array(
-                                                        option_text,
-                                                        $$,$$
-                                                ) AS option_text_array
-                                            FROM
-                                                (
-                                                    SELECT
-                                                        version_id,
-                                                        response_set_id,
-                                                        label,
-                                                        replace(
-                                                                options_text,
-                                                                $$\,$$,
-                                                                $$##@##@##$$
-                                                        ) AS option_text
-                                                    FROM
-                                                        response_set
-                                                        INNER JOIN
-                                                        response_type_filter
-                                                            ON
-                                                                response_type_filter.response_type_id
-                                                                =
-                                                                response_set.response_type_id
-                                                ) AS rs_text_replace
-                                        ) AS rs_opt_array
-                                ) AS rs_opt_array_rownum
-                        ) AS rs_opt_split
-                ) AS rs_opt_text
-                INNER JOIN
-                (
-                    SELECT
-                        rs_opt_value.version_id,
-                        rs_opt_value.response_set_id,
-                        rs_opt_value.label,
-                        rs_opt_value.option_value,
-                        min(
-                                rs_opt_value.option_order) AS option_order
-                    FROM
-                        (
-                            SELECT
-                                version_id,
-                                response_set_id,
-                                label,
-                                trim(
-                                        BOTH
-                                        FROM
-                                        (
-                                            option_value_array [
-                                            option_order
-                                            ]
-                                        )
-                                ) AS option_value,
-                                option_order
-                            FROM
-                                (
-                                    SELECT
-                                        version_id,
-                                        response_set_id,
-                                        label,
-                                        option_value_array,
-                                        generate_subscripts(
-                                                option_value_array,
-                                                1
-                                        ) AS option_order
-                                    FROM
-                                        (
-                                            SELECT
-                                                version_id,
-                                                response_set_id,
-                                                label,
-                                                string_to_array(
-                                                        options_values,
-                                                        $$,$$
-                                                ) AS option_value_array
-                                            FROM
-                                                response_set
-                                                INNER JOIN
-                                                response_type_filter
-                                                    ON
-                                                        response_type_filter.response_type_id
-                                                        =
-                                                        response_set.response_type_id
-                                        ) AS rs_opt_array
-                                ) AS rs_opt_array_rownum
-                        ) AS rs_opt_value
-                    GROUP BY
-                        rs_opt_value.version_id,
-                        rs_opt_value.response_set_id,
-                        rs_opt_value.label,
-                        rs_opt_value.option_value
-                ) AS rs_opt_value_min
-                    ON rs_opt_text.version_id = rs_opt_value_min.version_id
-                    AND
-                    rs_opt_text.response_set_id =
-                    rs_opt_value_min.response_set_id
-                    AND rs_opt_text.option_order = rs_opt_value_min.option_order
-    ), item_details AS (
-            WITH item_details_raw AS (
-                    SELECT
-                        ig.item_group_id         AS item_group_id_seq,
-                        ig.name                  AS item_group_name,
-                        ig.oc_oid                AS item_group_oid,
-                        item_data.ordinal        AS item_group_repeat,
-                        item.item_id             AS item_id_seq,
-                        item.name                AS item_name_raw,
-                        item.oc_oid              AS item_oid_raw,
-                        rt.name                  AS item_response_type,
-                        rs.response_set_id       AS item_response_set_id,
-                        rs.version_id            AS item_response_set_version_id,
-                        item_data.item_data_id   AS item_data_id_seq,
-                        item_data.event_crf_id   AS item_event_crf_id_seq,
-                        item_data.value          AS item_value_raw,
-                        item_data.date_created   AS item_data_date_created,
-                        item_data.date_updated   AS item_data_date_updated,
-                        ua_item_data_o.user_name AS item_data_created_by,
-                        ua_item_data_u.user_name AS item_data_updated_by,
-                        status_item_data.name    AS item_data_status
-                    FROM
-                        openclinica_fdw.item_data
-                        INNER JOIN
-                        openclinica_fdw.item
-                            ON item.item_id = item_data.item_id
-                        INNER JOIN
-                        openclinica_fdw.item_group_metadata AS igm
-                            ON item.item_id = igm.item_id
-                        INNER JOIN
-                        openclinica_fdw.item_group AS ig
-                            ON ig.item_group_id =
-                            igm.item_group_id
-                        INNER JOIN
-                        openclinica_fdw.item_form_metadata AS ifm
-                            ON ifm.item_id = item.item_id
-                        INNER JOIN
-                        openclinica_fdw.response_set AS rs
-                            ON rs.response_set_id =
-                            ifm.response_set_id
+                WHEN edc.double_entry = TRUE
+                THEN 'validation completed'
+                WHEN edc.double_entry = FALSE
+                THEN 'data entry complete'
+                ELSE 'unhandled'
+                END
+            WHEN ec.status_id = 4 --pending
+            THEN
+                CASE
+                WHEN ec.validator_id <>
+                     0 --default zero, blank if event_crf created by insertaction
+                THEN 'double data entry'
+                WHEN ec.validator_id = 0
+                THEN 'initial data entry complete'
+                ELSE 'unhandled'
+                END
+            ELSE ec_s.name
+            END                           AS crf_status,
+            ec.validator_id,
+            ec.sdv_status                 AS crf_sdv_status,
+            ec_ale_sdv.audit_date         AS crf_sdv_status_last_updated,
+            ec.sdv_update_id,
+            ec.interviewer_name           AS crf_interviewer_name,
+            ec.date_interviewed           AS crf_interview_date,
+            sct.label                     AS crf_section_label,
+            sct.title                     AS crf_section_title,
+            ig.oc_oid                     AS item_group_oid,
+            ig.name                       AS item_group_name,
+            id.ordinal                    AS item_group_repeat,
+            ifm.ordinal                   AS item_form_order,
+            ifm.question_number_label     AS item_question_number,
+            CASE
+            WHEN rt.name IN ('checkbox', 'multi-select') AND
+                 id.value <> $$$$
+            THEN concat(
+                    i.oc_oid,
+                    $$_$$,
+                    multi_split.split_value)
+            ELSE i.oc_oid
+            END                           AS item_oid,
+            CASE
+            WHEN rt.name IN ('checkbox', 'multi-select') AND
+                 id.value <> $$$$
+            THEN i.oc_oid
+            ELSE NULL
+            END                           AS item_oid_multi_orig,
+            i.units                       AS item_units,
+            idt.code                      AS item_data_type,
+            rt.name            AS item_response_type,
+            CASE
+            WHEN response_sets.label IN ('text', 'textarea')
+            THEN NULL
+            ELSE response_sets.label
+            END                           AS item_response_set_label,
+            response_sets.response_set_id AS item_response_set_id,
+            response_sets.version_id      AS item_response_set_version,
+            CASE
+            WHEN rt.name IN ('checkbox', 'multi-select') AND
+                 id.value <> $$$$
+            THEN concat(
+                    i.name,
+                    $$_$$,
+                    multi_split.split_value)
+            ELSE i.name
+            END                           AS item_name,
+            i.description                 AS item_description,
+            CASE
+            WHEN rt.name IN ('checkbox', 'multi-select')
+            THEN multi_split.split_value
+            ELSE id.value
+            END                           AS item_value,
+            id.date_created               AS item_value_created,
+            id.date_updated               AS item_value_last_updated,
+            id.owner_id                   AS id_owner_id,
+            id.update_id                  AS id_update_id,
+            id.item_data_id,
+            response_sets.option_text,
+            ua_ss_o.user_name             AS subject_owned_by_user,
+            ua_ss_u.user_name             AS subject_last_updated_by_user,
+            ua_se_o.user_name             AS event_owned_by_user,
+            ua_se_u.user_name             AS event_last_updated_by_user,
+            ua_ec_o.user_name             AS crf_owned_by_user,
+            ua_ec_u.user_name             AS crf_last_updated_by_user,
+            ua_ec_v.user_name             AS crf_validated_by_user,
+            (CASE
+             WHEN ec.sdv_status IS FALSE
+             THEN NULL
+             WHEN ec.sdv_status IS TRUE
+             THEN ua_ec_s.user_name
+             ELSE 'unhandled'
+             END)                         AS crf_sdv_by_user,
+            ua_id_o.user_name             AS item_value_owned_by_user,
+            ua_id_u.user_name             AS item_value_last_updated_by_user
+        FROM
+            openclinica_fdw.study
+            LEFT JOIN
+            (
+                SELECT
+                    study.*
+                FROM
+                    openclinica_fdw.study
+                WHERE
+                    study.status_id NOT IN
+                    (5, 7) /*removed, auto-removed*/) AS parents
+                ON parents.study_id = study.parent_study_id
+            INNER JOIN
+            openclinica_fdw.study_subject AS ss
+                ON ss.study_id = study.study_id
+            INNER JOIN
+            openclinica_fdw.subject AS sub
+                ON sub.subject_id = ss.subject_id
+            INNER JOIN
+            openclinica_fdw.study_event AS se
+                ON se.study_subject_id = ss.study_subject_id
+            INNER JOIN
+            openclinica_fdw.study_event_definition AS sed
+                ON sed.study_event_definition_id = se.study_event_definition_id
+            INNER JOIN
+            openclinica_fdw.subject_event_status AS ses
+                ON ses.subject_event_status_id = se.subject_event_status_id
+            INNER JOIN
+            openclinica_fdw.event_definition_crf AS edc
+                ON edc.study_event_definition_id = se.study_event_definition_id
+            INNER JOIN
+            openclinica_fdw.event_crf AS ec
+                ON se.study_event_id = ec.study_event_id
+                   AND ec.study_subject_id = ss.study_subject_id
+            INNER JOIN
+            openclinica_fdw.status AS ec_s
+                ON ec.status_id = ec_s.status_id
+            LEFT JOIN
+            ec_ale_sdv
+                ON ec_ale_sdv.event_crf_id = ec.event_crf_id
+            INNER JOIN
+            openclinica_fdw.crf_version AS cv
+                ON cv.crf_version_id = ec.crf_version_id
+                   AND cv.crf_id = edc.crf_id
+            INNER JOIN
+            openclinica_fdw.crf
+                ON crf.crf_id = cv.crf_id
+                   AND crf.crf_id = edc.crf_id
+            INNER JOIN
+            openclinica_fdw.item_group AS ig
+                ON ig.crf_id = crf.crf_id
+            INNER JOIN
+            openclinica_fdw.item_group_metadata AS igm
+                ON igm.item_group_id = ig.item_group_id
+                   AND igm.crf_version_id = cv.crf_version_id
+            INNER JOIN
+            openclinica_fdw.item_form_metadata AS ifm
+                ON cv.crf_version_id = ifm.crf_version_id
+            INNER JOIN
+            openclinica_fdw.item AS i
+                ON i.item_id = ifm.item_id
+                   AND i.item_id = igm.item_id
+            INNER JOIN
+            openclinica_fdw.item_data_type AS idt
+                ON idt.item_data_type_id = i.item_data_type_id
+            INNER JOIN
+            openclinica_fdw.response_set AS rs
+                ON rs.response_set_id = ifm.response_set_id
+                   AND rs.version_id = ifm.crf_version_id
+            INNER JOIN
+            openclinica_fdw.response_type AS rt
+                ON rs.response_type_id = rt.response_type_id
+            INNER JOIN
+            openclinica_fdw."section" AS sct
+                ON sct.crf_version_id = cv.crf_version_id
+                   AND sct.section_id = ifm.section_id
+            INNER JOIN
+            openclinica_fdw.item_data AS id
+                ON id.item_id = i.item_id
+                   AND id.event_crf_id = ec.event_crf_id
+            LEFT JOIN
+            multi_split
+                ON multi_split.item_data_id = id.item_data_id
+            LEFT JOIN
+            dm.response_sets
+                ON response_sets.response_set_id = rs.response_set_id
+                   AND response_sets.version_id = rs.version_id
+                   AND (response_sets.option_value = id.value OR
+                        response_sets.option_value =
+                        multi_split.split_value)
+                   AND id.value != $$$$
+            LEFT JOIN
+            openclinica_fdw.user_account AS ua_ss_o
+                ON ua_ss_o.user_id = ss.owner_id
+            LEFT JOIN
+            openclinica_fdw.user_account AS ua_ss_u
+                ON ua_ss_u.user_id = se.update_id
+            LEFT JOIN
+            openclinica_fdw.user_account AS ua_se_o
+                ON ua_se_o.user_id = se.owner_id
+            LEFT JOIN
+            openclinica_fdw.user_account AS ua_se_u
+                ON ua_se_u.user_id = se.update_id
+            LEFT JOIN
+            openclinica_fdw.user_account AS ua_ec_o
+                ON ua_ec_o.user_id = ec.owner_id
+            LEFT JOIN
+            openclinica_fdw.user_account AS ua_ec_u
+                ON ua_ec_u.user_id = ec.update_id
+            LEFT JOIN
+            openclinica_fdw.user_account AS ua_ec_v
+                ON ua_ec_v.user_id = ec.validator_id
+            LEFT JOIN
+            openclinica_fdw.user_account AS ua_ec_s
+                ON ua_ec_s.user_id = ec.sdv_update_id
+            LEFT JOIN
+            openclinica_fdw.user_account AS ua_id_o
+                ON ua_id_o.user_id = id.owner_id
+            LEFT JOIN
+            openclinica_fdw.user_account AS ua_id_u
+                ON ua_id_u.user_id = id.update_id
+        WHERE
+            study.status_id NOT IN (5, 7) --removed, auto-removed
+            AND ss.status_id NOT IN (5, 7)
+            AND se.status_id NOT IN (5, 7)
+            AND ec.status_id NOT IN (5, 7)
+            AND sed.status_id NOT IN (5, 7)
+            AND edc.status_id NOT IN (5, 7)
+            AND cv.status_id NOT IN (5, 7)
+            AND crf.status_id NOT IN (5, 7)
+            AND ig.status_id NOT IN (5, 7)
+            AND i.status_id NOT IN (5, 7)
+            AND sct.status_id NOT IN (5, 7)
+            AND id.status_id NOT IN (5, 7)
+            -- the follow conditions result in study level event definitions
+            AND
+            CASE WHEN
+                CASE WHEN edc.parent_id IS NOT NULL THEN
+                    edc.event_definition_crf_id =
+                    (
+                        SELECT
+                            max(
+                                    edc_max.event_definition_crf_id) edc_max
+                        FROM
+                            openclinica_fdw.event_definition_crf AS edc_max
+                        WHERE
+                            edc_max.study_event_definition_id
+                            =
+                            se.study_event_definition_id
                             AND
-                            rs.version_id = ifm.crf_version_id
-                        INNER JOIN
-                        openclinica_fdw.response_type AS rt
-                            ON rs.response_type_id =
-                            rt.response_type_id
-                        INNER JOIN
-                        status_filter AS status_item_data
-                            ON item_data.status_id =
-                            status_item_data.status_id
-                        INNER JOIN
-                        user_id_name AS ua_item_data_o
-                            ON item_data.owner_id =
-                            ua_item_data_o.user_id
-                        LEFT JOIN
-                        user_id_name AS ua_item_data_u
-                            ON item_data.update_id =
-                            ua_item_data_u.user_id
-                    WHERE
-                        item_data.value <> $$$$
-            ), multi_split AS (
-                    SELECT
-                        item_data_id_seq,
-                        item_value_split,
-                        concat_ws(
-                                $$_$$,
-                                item_oid_raw,
-                                item_value_split) AS item_oid_multi,
-                        concat_ws(
-                                $$_$$,
-                                item_name_raw,
-                                item_value_split) AS item_name_multi
-                    FROM
-                        (
-                            SELECT
-                                item_data_id_seq,
-                                item_oid_raw,
-                                item_name_raw,
-                                regexp_split_to_table(
-                                        item_value_raw,
-                                        $$,$$) AS item_value_split
-                            FROM
-                                item_details_raw
-                            WHERE
-                                item_response_type IN
-                                ($$checkbox$$, $$multi-select$$)
-                        ) AS idr_split
-            )
-            SELECT
-                idr.*,
-                ms.item_value_split,
-                CASE WHEN ms.item_oid_multi IS NOT NULL
-                THEN ms.item_oid_multi
-                ELSE idr.item_oid_raw
-                END AS item_oid,
-                CASE WHEN ms.item_name_multi IS NOT NULL
-                THEN ms.item_name_multi
-                ELSE idr.item_name_raw
-                END AS item_name,
-                CASE WHEN ms.item_value_split IS NOT NULL
-                THEN ms.item_value_split
-                ELSE idr.item_value_raw
-                END AS item_value,
-                response_sets.option_text
-            FROM
-                item_details_raw AS idr
-                LEFT JOIN
-                multi_split AS ms
-                    ON ms.item_data_id_seq = idr.item_data_id_seq
-                LEFT JOIN
-                response_sets
-                    ON response_sets.response_set_id = idr.item_response_set_id
-                    AND
-                    response_sets.version_id = idr.item_response_set_version_id
-                    AND response_sets.option_value =
-                        COALESCE(
-                                ms.item_value_split,
-                                idr.item_value_raw)
-    )
-    SELECT
-        study_details.*,
-        subject_details.*,
-        event_details.*,
-        crf_details.*,
-        item_details.*
-    FROM
-        study_details
-        INNER JOIN
-        subject_details
-            ON subject_details.subject_study_id = study_details.site_id
-        INNER JOIN
-        event_details
-            ON subject_details.study_subject_id_seq =
-            event_details.event_study_subject_id_seq
-        INNER JOIN
-        crf_details
-            ON crf_details.crf_study_event_id_seq = event_details.study_event_id_seq
-            AND crf_details.edc_study_id = study_details.study_id
-        INNER JOIN
-        item_details
-            ON item_details.item_event_crf_id_seq = crf_details.event_crf_id_seq
+                            edc_max.crf_id = crf.crf_id
+                        GROUP BY
+                            edc_max.study_event_definition_id,
+                            edc_max.crf_id) END
+            THEN TRUE
+            ELSE
+                CASE WHEN edc.parent_id IS NULL AND
+                          (
+                              SELECT
+                                  count(
+                                          edc_count.event_definition_crf_id) edc_count
+                              FROM
+                                  openclinica_fdw.event_definition_crf AS edc_count
+                              WHERE
+                                  edc_count.study_event_definition_id =
+                                  se.study_event_definition_id
+                                  AND edc_count.crf_id = crf.crf_id
+                              GROUP BY
+                                  edc_count.study_event_definition_id,
+                                  edc_count.crf_id) = 1
+                THEN
+                    edc.event_definition_crf_id =
+                    (
+                        SELECT
+                            min(
+                                    edc_min.event_definition_crf_id) edc_min
+                        FROM
+                            openclinica_fdw.event_definition_crf AS edc_min
+                        WHERE
+                            edc_min.study_event_definition_id =
+                            se.study_event_definition_id
+                            AND edc_min.crf_id = crf.crf_id
+                        GROUP BY
+                            edc_min.study_event_definition_id,
+                            edc_min.crf_id)
+                END
+            END;
             $query$;
     END;
     $BODY$
