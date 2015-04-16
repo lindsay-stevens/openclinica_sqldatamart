@@ -3,19 +3,19 @@ REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA openclinica_fdw FROM public;
 /* required to connect to foreign server, can only be run by superuser */
 CREATE EXTENSION IF NOT EXISTS postgres_fdw;
 /* administrator role that will be used for managing the database */  
-CREATE ROLE dm_admin INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOLOGIN;
+CREATE ROLE :datamart_admin_role_name INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOLOGIN;
 /* grant execution privilege to dm_admin on the dm functions */
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA openclinica_fdw to dm_admin;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA openclinica_fdw to :datamart_admin_role_name;
 /* add postgres to dm_admin, but for now don't impersonate */
-GRANT dm_admin TO postgres;
+GRANT :datamart_admin_role_name TO postgres;
 /* give control of the report database to dm_admin */
-GRANT ALL ON DATABASE openclinica_fdw_db TO dm_admin;
+GRANT ALL ON DATABASE openclinica_fdw_db TO :datamart_admin_role_name;
 /* give control of the foreign objects schema to dm_admin */
-GRANT ALL ON SCHEMA openclinica_fdw TO dm_admin;
+GRANT ALL ON SCHEMA openclinica_fdw TO :datamart_admin_role_name;
 /* add a schema for the centralised datamart views */
 CREATE SCHEMA dm;
 /* give control of to the dm schema to dm_admin */
-GRANT ALL ON SCHEMA dm TO dm_admin;
+GRANT ALL ON SCHEMA dm TO :datamart_admin_role_name;
 /* add a foreign server definition for connecting with later, variables are substituted by the batch script */
 CREATE SERVER openclinica_fdw_server
 FOREIGN DATA WRAPPER postgres_fdw
@@ -23,24 +23,23 @@ OPTIONS (
     host :foreign_server_host_name,
     hostaddr :foreign_server_host_address,
     port :foreign_server_port,
-    dbname :foreign_server_database,
-    sslmode 'verify-full',
-    sslrootcert 'root.crt'
+    dbname :foreign_server_database
+    :foreign_server_data_wrapper_kwargs
 );
-/* turn off logging temporarily so ocdm_fdw password isn't logged */
+/* turn off logging temporarily so foreign server user password isn't logged */
 SET log_statement TO 'none';
 /* map the foreign server user to dm_admin so any dm_admin can access and refresh foreign objects */
-CREATE USER MAPPING FOR dm_admin SERVER openclinica_fdw_server
+CREATE USER MAPPING FOR :datamart_admin_role_name SERVER openclinica_fdw_server
 OPTIONS (
-USER 'ocdm_fdw',
+USER :foreign_server_user_name,
 PASSWORD :foreign_server_user_password
 );
 /* turn logging back on */
 SET log_statement TO 'all';
 /* give usage so any dm_admin can access and refresh foreign objects */
-GRANT USAGE ON FOREIGN SERVER openclinica_fdw_server TO dm_admin;
+GRANT USAGE ON FOREIGN SERVER openclinica_fdw_server TO :datamart_admin_role_name;
 /* impersonate dm_admin so that the following commands create objects owned by dm_admin */
-SET ROLE dm_admin;
+SET ROLE :datamart_admin_role_name;
 /* add foreign tables for catalog tables for looking up objects and their definitions  */
 SELECT dm_create_ft_catalog();
 /* add foreign tables for each table or view in the specified openclinica schema */
@@ -66,7 +65,9 @@ SELECT dm_create_dm_metadata_crf_ig_item();
 /* add dm matview with study list and their schema names */
 SELECT dm_create_dm_metadata_study();
 /* add index on non-blank item_data values which helps the dm_clinicaldata query */
-CREATE INDEX i_item_id_value_notblank ON item_data USING btree (item_id) WHERE ("value" <> $$$$)
+CREATE INDEX i_item_id_value_notblank ON item_data USING btree (item_id) WHERE ("value" <> $$$$);
+/* change query planner parameter, improves execution time of dm.clinicaldata query */
+SET join_collapse_limit = 1;
 /* add dm matview with item data and related site or study metadata */
 SELECT dm_create_dm_clinicaldata();
 /* change query planner parameter back to default */
@@ -94,49 +95,23 @@ SELECT dm_create_dm_response_set_labels();
 SELECT dm_create_dm_user_account_roles();
 /* add dm matview with sdv status history for each subject event crf */
 SELECT dm_create_dm_sdv_status_history();
-/* add a view for running the set of study schema object creation functions */
-CREATE VIEW dm.build_study_functions AS
-    SELECT
-        dm_create_study_schemas(
-                study_name),
-        dm_create_study_common_matviews(
-                study_name),
-        dm_create_study_itemgroup_matviews(
-                FALSE,
-                study_name),
-        dm_create_study_itemgroup_matviews(
-                TRUE,
-                study_name) AS dm_create_study_itemgroup_matviews_av,
-        dm_create_study_role(
-                study_name),
-        dm_grant_study_schema_access_to_study_role(
-                study_name)
-    FROM
-        (
-            SELECT
-                DISTINCT
-                study_name
-            FROM
-                dm.metadata AS dmd
-            WHERE
-                dmd.study_status != $$removed$$
-                AND NOT EXISTS
-                (
-                        SELECT
-                            n.nspname AS schemaname
-                        FROM
-                            pg_class AS c
-                            LEFT JOIN
-                            pg_namespace AS n
-                                ON n.oid = c.relnamespace
-                        WHERE
-                            c.relkind = $$m$$
-                            AND dm_clean_name_string(
-                                        dmd.study_name) = n.nspname
-                        ORDER BY
-                            c.oid
-                )
-        ) AS study_names;
+/* next few commands committed individually, otherwise 'out of shared memory' */
+/* create study schemas that don't already exist */
+BEGIN;
+SELECT dm_create_study_schemas();
+COMMIT;
+/* create copy of dm matviews in for each study, filtered for that study */
+BEGIN;
+SELECT dm_create_study_common_matviews();
+COMMIT;
+/* create item group matviews */
+BEGIN;
+SELECT dm_create_study_itemgroup_matviews();
+COMMIT;
+/* create item group aliases views */
+BEGIN;
+SELECT dm_create_study_itemgroup_matviews(TRUE);
+COMMIT;
 /* add a view for running user management functions */
 CREATE VIEW dm.user_management_functions AS
 SELECT 
@@ -238,9 +213,12 @@ CREATE VIEW dm.refresh_matviews_study AS
             ORDER BY
                 c.oid
         ) AS mv;
-/* change back to postgres user for createrole permission to run views */
+/* change back to postgres user for createrole permission */
 SET ROLE postgres;
-TABLE dm.build_study_functions;
+/* create study roles */
+SELECT dm_create_study_role();
+/* grant access to the study schema to the study role */
+SELECT dm_grant_study_schema_access_to_study_role();
 TABLE dm.user_management_functions;
 /* reassign ownership of the study matviews created above to dm_admin so it can do refresh */
-SELECT dm_reassign_owner_study_matviews();
+SELECT dm_reassign_owner_study_matviews(:datamart_admin_role_name_string);
