@@ -315,8 +315,18 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_study_itemgroup_matviews(
                                                 ELSE $$m$$
                                                 END
                                             )
-                                            AND dmms.study_name_clean = n.nspname
-                                            AND lower(dm_meta.item_group_oid) = c.relname
+                                            AND
+                                            dmms.study_name_clean = n.nspname
+                                            AND c.relname = (
+                                                CASE WHEN alias_views
+                                                THEN format(
+                                                        $$av_%1$s$$,
+                                                        lower(
+                                                            dm_meta.item_group_oid)
+                                                    )
+                                                ELSE lower(dm_meta.item_group_oid)
+                                                END
+                                            )
                                         ORDER BY
                                             c.oid
                                     )
