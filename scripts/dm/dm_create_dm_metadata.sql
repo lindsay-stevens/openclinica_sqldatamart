@@ -309,8 +309,8 @@ FROM
                     DISTINCT ON (metadata_no_multi.item_oid)
                     metadata_no_multi.item_oid,
                     metadata_no_multi.item_name,
-                    metadata_no_multi.item_response_set_id,
-                    metadata_no_multi.item_response_set_version
+                    max(metadata_no_multi.item_response_set_id) AS item_response_set_id,
+                    max(metadata_no_multi.item_response_set_version) AS item_response_set_version
                 FROM
                     metadata_no_multi
                 WHERE
@@ -319,6 +319,9 @@ FROM
                         'multi-select',
                         'checkbox'
                     )
+                GROUP BY
+                    metadata_no_multi.item_oid,
+                    metadata_no_multi.item_name
             ) AS mnm
                 ON mnm.item_response_set_id =
                    response_sets.response_set_id
