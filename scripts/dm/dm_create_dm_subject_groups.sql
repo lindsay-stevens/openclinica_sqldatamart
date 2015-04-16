@@ -10,8 +10,12 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_subject_groups()
             sub.subject_id,
             gct.name       AS group_class_type,
             sgc.name       AS group_class_name,
+            sgc.subject_assignment AS group_class_required,
             sg.name        AS group_name,
-            sg.description AS group_description
+            sg.description AS group_description,
+            sgm.notes      AS group_map_notes,
+            sgm.date_created AS group_map_date_created,
+            sgm.date_updated AS group_map_date_updated
         FROM
             dm.subjects AS sub
             INNER JOIN
