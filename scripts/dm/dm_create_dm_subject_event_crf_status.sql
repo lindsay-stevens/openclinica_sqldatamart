@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION dm_create_dm_subject_event_crf_status()
         EXECUTE $query$
     CREATE MATERIALIZED VIEW dm.subject_event_crf_status AS
         SELECT
-            DISTINCT ON (study_name, subject_id, event_oid, crf_version_oid)
+            DISTINCT ON (study_name, subject_id, event_oid, event_repeat, crf_version_oid)
             cd.study_name,
             cd.site_oid,
             cd.site_name,
