@@ -125,7 +125,7 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_study_itemgroup_matviews(
                         format
                         (
                             $$ max(case when item_oid=%1$L
-                                      then (case when item_value = '' then null
+                                      then (case when item_value ~ $re$^[\s]*?$$re$ then null
                                       when item_value IN (%2$s)
                                       then null else cast(item_value as %3$s
                                       ) end) else null end) as %4$I $$,
@@ -157,7 +157,7 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_study_itemgroup_matviews(
                             THEN NULL
                             ELSE format(
                                 $$ , max(case when item_oid=%1$L
-                                          then (case when item_value = ''
+                                          then (case when item_value ~ $re$^[\s]*?$$re$
                                           then null when item_value IN (%2$s)
                                           then null else option_text end)
                                           else null end) as %3$s_label$$,
