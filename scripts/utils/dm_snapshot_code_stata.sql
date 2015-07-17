@@ -48,16 +48,21 @@ CREATE OR REPLACE FUNCTION public.dm_snapshot_code_stata(
             views
         UNION ALL
         SELECT
-            format(
-                    $line$odbc load, exec("SELECT * FROM %1$s.%2$s `data_filter_string'") connectionstring("`odbc_string_or_file_dsn_path'")
-                    save "`snapshotdir'/%3$s.dta"
-                    clear$line$,
+            concat(
+                $line$odbc load, exec("SELECT * $line$,
+                format(
+                    $line$FROM %1$s.%2$s `data_filter_string'") $line$,
                     filter_study_name_schema,
-                    relname,
-                    substring(
-                            relname
-                            FROM
-                            4)
+                    relname
+                ),
+                $line$connectionstring("`odbc_string_or_file_dsn_path'") $line$,
+                chr(10),
+                format(
+                    $line$save "`snapshotdir'/%1$s.dta"$line$,
+                    substring(relname FROM 4)
+                ),
+                chr(10),
+                $line$clear$line$
             )
         FROM
             views
@@ -65,12 +70,21 @@ CREATE OR REPLACE FUNCTION public.dm_snapshot_code_stata(
             views.relkind = $$v$$
         UNION ALL
         SELECT
-            format(
-                    $line$odbc load, exec("SELECT * FROM %1$s.%2$s") connectionstring("`odbc_string_or_file_dsn_path'")
-                    save "`snapshotdir'/%2$s.dta"
-                    clear$line$,
+            concat(
+                $line$odbc load, exec("SELECT * $line$,
+                format(
+                    $line$FROM %1$s.%2$s `data_filter_string'") $line$,
                     filter_study_name_schema,
                     relname
+                ),
+                $line$connectionstring("`odbc_string_or_file_dsn_path'") $line$,
+                chr(10),
+                format(
+                    $line$save "`snapshotdir'/%1$s.dta"$line$,
+                    relname
+                ),
+                chr(10),
+                $line$clear$line$
             )
         FROM
             views
