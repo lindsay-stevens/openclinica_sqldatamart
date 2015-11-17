@@ -1,5 +1,5 @@
 # Welcome
-Welcome to the openclinica_sqldatamart wiki!
+Welcome to the openclinica_sqldatamart documentation!
 
 
 # Summary
