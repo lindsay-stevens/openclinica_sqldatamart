@@ -1,2 +1,2 @@
 #OpenClinica sqldatamart
-Please refer to the wiki
+Welcome! Please refer to the [docs](docs).
