@@ -14,3 +14,4 @@
    - [dm](reference/dm.md)
    - [study](reference/study.md)
    - [utils](reference/utils.md)
+1. [Changelog](changelog.md)
