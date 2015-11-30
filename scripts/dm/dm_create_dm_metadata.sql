@@ -294,12 +294,12 @@ FROM
             format(
                     $$%1$s_%2$s$$,
                     mnm.item_oid,
-                    response_sets.option_value
+                    response_sets.option_order
             )             AS item_oid,
             format(
                     $$%1$s_%2$s$$,
                     mnm.item_name,
-                    response_sets.option_value
+                    response_sets.option_order
             )             AS item_name
         FROM
             dm.response_sets
