@@ -288,7 +288,7 @@ CREATE OR REPLACE FUNCTION dm_create_dm_clinicaldata()
                 ON ua_ss_o.user_id = ss.owner_id
             LEFT JOIN
             openclinica_fdw.user_account AS ua_ss_u
-                ON ua_ss_u.user_id = se.update_id
+                ON ua_ss_u.user_id = ss.update_id
             LEFT JOIN
             openclinica_fdw.user_account AS ua_se_o
                 ON ua_se_o.user_id = se.owner_id
