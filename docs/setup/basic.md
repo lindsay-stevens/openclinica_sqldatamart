@@ -111,3 +111,5 @@ the variables.
 - Edit the *setup_sqldatamart* bat file *set* statements to match the values 
   relevant to the environment.
 - Run the *setup_sqldatamart* bat file.
+
+Here comes some extra text.
