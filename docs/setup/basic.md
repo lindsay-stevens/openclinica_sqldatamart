@@ -3,6 +3,7 @@
 
 ## Dependencies
 - PostgreSQL 9.3+
+([Considerations on having two postgres versions on one server](#considerations-on-having-two-postgres-versions-on-one-server))
 
 
 ## Summary
@@ -19,8 +20,8 @@ On OCDM server:
 
 
 ### Create an OC Postgres Login Role for OCDM
-In order to retrieve data, OCDM needs to be able to connect to OC, which 
-requires a login user on the OC postgres server. This server to server 
+In order to retrieve data, OCDM needs to be able to connect to OC, which
+requires a login user on the OC postgres server. This server to server
 connection requires password authentication, as it cannot use SSPI.
 
 - Log in to OC postgres as a superuser and run the following commands to create
@@ -88,26 +89,56 @@ host openclinica     ocdm_fdw             ocdmIPAddress/32         md5
 - Complete the optional installation of pgAgent job scheduler
 - Choose a good password for the postgres superuser and keep it secret.
 
-There seemed to be a bug in the postgres installation when using double quote 
-characters in the password. The *data* directory would fail to be created. Use 
+There seemed to be a bug in the postgres installation when using double quote
+characters in the password. The *data* directory would fail to be created. Use
 lots of other characters instead.
 
-For the basic setup it is assumed that the pg_agent service will run as the 
+For the basic setup it is assumed that the pg_agent service will run as the
 postgres superuser. If this is not desired, see the advanced setup.
 
 
 ### Create postgres OpenClinica Report Database
-The creation of the database is handled by a package of scripts called 
-*sqldatamart*. A batch file accepts settings for the database which are 
-substituted into the scripts where necessary. The setup needs to be run as a 
-superuser because it requires a 'CREATE EXTENSION' statement for the foreign 
+The creation of the database is handled by a package of scripts called
+*sqldatamart*. A batch file accepts settings for the database which are
+substituted into the scripts where necessary. The setup needs to be run as a
+superuser because it requires a 'CREATE EXTENSION' statement for the foreign
 data wrapper, which can only be executed by superusers.
 
-The build process is controlled by the *dm_build_commands* script. The script 
-includes variables which must be provided to psql during the running of the 
-script. The provided *setup_sqldatamart* Windows batch file sets and passes in 
-the variables. 
+The build process is controlled by the *dm_build_commands* script. The script
+includes variables which must be provided to psql during the running of the
+script. The provided *setup_sqldatamart* Windows batch file sets and passes in
+the variables.
 
-- Edit the *setup_sqldatamart* bat file *set* statements to match the values 
+- Edit the *setup_sqldatamart* bat file *set* statements to match the values
   relevant to the environment.
 - Run the *setup_sqldatamart* bat file.
+
+# Considerations on having two postgres versions on one server
+If you have been using PostgreSQL 8.x for OpenClinica so far and want to start using the datamart on the same server, you will have to install PostgreSQL 9.3+.
+This is best done using apt-get, for example:
+```
+apt-get update
+
+cd /etc/apt/sources.list.d/
+vi pgdg.list
+deb http://apt.postgresql.org/pub/repos/apt/ squeeze-pgdg main
+
+wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
+apt-get update
+apt-get install postgresql-9.4
+```
+
+The installation script will configure PostgreSQL 9.x to listen on port 5433, because PostgreSQL 8.4 is already listening on port 5432.  
+Another change will be that both version are started and stopped at the same time, because they are treated as a cluster. In /etc/init.d you will have one *postgresql* script with which you can start or stop both services.  For example */etc/init.d/postgresql start* will have as output:  
+```debian
+/etc/init.d/postgresql start
+Starting PostgreSQL 8.4 database server: main.  
+Starting PostgreSQL 9.4 database server: main.  
+```
+
+Or to display the ports:
+```debian
+./postgresql status
+8.4/main (port 5432): online
+9.4/main (port 5433): online
+```
