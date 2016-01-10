@@ -4,32 +4,7 @@ CREATE OR REPLACE FUNCTION dm_create_dm_clinicaldata()
     BEGIN
         EXECUTE $query$
     CREATE MATERIALIZED VIEW dm.clinicaldata AS
-        WITH multi_split AS (
-                SELECT
-                    id.item_data_id,
-                    regexp_split_to_table(
-                            id.value,
-                            $$,$$) AS split_value
-                FROM
-                    openclinica_fdw.item_data AS id
-                    INNER JOIN
-                    openclinica_fdw.event_crf AS ec
-                        ON ec.event_crf_id = id.event_crf_id
-                    INNER JOIN
-                    openclinica_fdw.item_form_metadata AS ifm
-                        ON ifm.crf_version_id = ec.crf_version_id
-                           AND ifm.item_id = id.item_id
-                    INNER JOIN
-                    openclinica_fdw.response_set AS rs
-                        ON rs.response_set_id = ifm.response_set_id
-                           AND rs.version_id = ifm.crf_version_id
-                    INNER JOIN
-                    openclinica_fdw.response_type AS rt
-                        ON rt.response_type_id = rs.response_type_id
-                WHERE
-                    id.status_id NOT IN (5, 7)
-                    AND rt.name IN ('checkbox', 'multi-select')
-        ), ec_ale_sdv AS (
+        WITH ec_ale_sdv AS (
                 SELECT
                     ale.event_crf_id,
                     max(
@@ -130,23 +105,9 @@ CREATE OR REPLACE FUNCTION dm_create_dm_clinicaldata()
             id.ordinal                    AS item_group_repeat,
             ifm.ordinal                   AS item_form_order,
             ifm.question_number_label     AS item_question_number,
-            CASE
-            WHEN rt.name IN ('checkbox', 'multi-select') AND
-                 id.value <> $$$$
-            THEN concat(
-                    i.oc_oid,
-                    $$_$$,
-                    multi_split.split_value)
-            ELSE i.oc_oid
-            END                           AS item_oid,
-            CASE
-            WHEN rt.name IN ('checkbox', 'multi-select') AND
-                 id.value <> $$$$
-            THEN i.oc_oid
-            ELSE NULL
-            END                           AS item_oid_multi_orig,
+            i.oc_oid                      AS item_oid,
             i.units                       AS item_units,
-            idt.code                      AS item_data_type,
+            id.code                      AS item_data_type,
             rt.name            AS item_response_type,
             CASE
             WHEN response_sets.label IN ('text', 'textarea')
@@ -155,21 +116,9 @@ CREATE OR REPLACE FUNCTION dm_create_dm_clinicaldata()
             END                           AS item_response_set_label,
             response_sets.response_set_id AS item_response_set_id,
             response_sets.version_id      AS item_response_set_version,
-            CASE
-            WHEN rt.name IN ('checkbox', 'multi-select') AND
-                 id.value <> $$$$
-            THEN concat(
-                    i.name,
-                    $$_$$,
-                    multi_split.split_value)
-            ELSE i.name
-            END                           AS item_name,
+            i.name                        AS item_name,
             i.description                 AS item_description,
-            CASE
-            WHEN rt.name IN ('checkbox', 'multi-select')
-            THEN multi_split.split_value
-            ELSE id.value
-            END                           AS item_value,
+            id.value                      AS item_value,
             id.date_created               AS item_value_created,
             id.date_updated               AS item_value_last_updated,
             id.owner_id                   AS id_owner_id,
@@ -255,8 +204,8 @@ CREATE OR REPLACE FUNCTION dm_create_dm_clinicaldata()
                 ON i.item_id = ifm.item_id
                    AND i.item_id = igm.item_id
             INNER JOIN
-            openclinica_fdw.item_data_type AS idt
-                ON idt.item_data_type_id = i.item_data_type_id
+            openclinica_fdw.item_data_type AS id
+                ON id.item_data_type_id = i.item_data_type_id
             INNER JOIN
             openclinica_fdw.response_set AS rs
                 ON rs.response_set_id = ifm.response_set_id
@@ -273,15 +222,10 @@ CREATE OR REPLACE FUNCTION dm_create_dm_clinicaldata()
                 ON id.item_id = i.item_id
                    AND id.event_crf_id = ec.event_crf_id
             LEFT JOIN
-            multi_split
-                ON multi_split.item_data_id = id.item_data_id
-            LEFT JOIN
             dm.response_sets
                 ON response_sets.response_set_id = rs.response_set_id
                    AND response_sets.version_id = rs.version_id
-                   AND (response_sets.option_value = id.value OR
-                        response_sets.option_value =
-                        multi_split.split_value)
+                   AND response_sets.option_value = id.value
                    AND id.value != $$$$
             LEFT JOIN
             openclinica_fdw.user_account AS ua_ss_o
