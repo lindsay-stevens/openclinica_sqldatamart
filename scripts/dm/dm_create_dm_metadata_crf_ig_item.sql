@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_metadata_crf_ig_item()
         EXECUTE $query$
     CREATE MATERIALIZED VIEW dm.metadata_crf_ig_item AS
         SELECT
-            DISTINCT ON (study_name, crf_version_oid, item_oid)
+            DISTINCT ON (study_name, crf_version_oid, item_group_oid, item_oid)
             study_name,
             study_status,
             study_date_created,
@@ -29,6 +29,7 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_metadata_crf_ig_item()
             item_name,
             item_oid_multi_original,
             item_name_multi_original,
+            item_response_order_multi,
             item_units,
             item_data_type,
             item_response_type,
