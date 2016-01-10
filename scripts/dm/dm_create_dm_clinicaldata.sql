@@ -107,8 +107,8 @@ CREATE OR REPLACE FUNCTION dm_create_dm_clinicaldata()
             ifm.question_number_label     AS item_question_number,
             i.oc_oid                      AS item_oid,
             i.units                       AS item_units,
-            id.code                      AS item_data_type,
-            rt.name            AS item_response_type,
+            idt.code                      AS item_data_type,
+            rt.name                       AS item_response_type,
             CASE
             WHEN response_sets.label IN ('text', 'textarea')
             THEN NULL
@@ -204,8 +204,8 @@ CREATE OR REPLACE FUNCTION dm_create_dm_clinicaldata()
                 ON i.item_id = ifm.item_id
                    AND i.item_id = igm.item_id
             INNER JOIN
-            openclinica_fdw.item_data_type AS id
-                ON id.item_data_type_id = i.item_data_type_id
+            openclinica_fdw.item_data_type AS idt
+                ON idt.item_data_type_id = i.item_data_type_id
             INNER JOIN
             openclinica_fdw.response_set AS rs
                 ON rs.response_set_id = ifm.response_set_id

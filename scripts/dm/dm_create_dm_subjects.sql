@@ -3,7 +3,7 @@ CREATE OR REPLACE FUNCTION dm_create_dm_subjects()
     $BODY$
     BEGIN
         EXECUTE $query$
-
+CREATE MATERIALIZED VIEW dm.subjects AS
 SELECT
   COALESCE(
     parents.name, 
