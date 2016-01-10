@@ -77,7 +77,7 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_metadata()
                 ifm.ordinal               AS item_form_order,
                 i.oc_oid                  AS item_oid,
                 i.units                   AS item_units,
-                idt.code                  AS item_data_type,
+                id.code                  AS item_data_type,
                 rt.name                   AS item_response_type,
                 (
                     CASE
@@ -103,7 +103,7 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_metadata()
                 ifm.required              AS item_required,
                 ifm.default_value         AS item_default_value,
                 ifm.response_layout       AS item_response_layout,
-                ifm.width_decimal         AS item_width_decimal,
+                ifm.widh_decimal         AS item_widh_decimal,
                 ifm.show_item             AS item_show_item,
                 sim.item_oid              AS item_scd_item_oid,
                 sim.option_value          AS item_scd_item_option_value,
@@ -151,8 +151,8 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_metadata()
                     ON i.item_id = ifm.item_id
                        AND i.item_id = igm.item_id
                 INNER JOIN
-                openclinica_fdw.item_data_type AS idt
-                    ON idt.item_data_type_id = i.item_data_type_id
+                openclinica_fdw.item_data_type AS id
+                    ON id.item_data_type_id = i.item_data_type_id
                 LEFT JOIN
                 study_with_status AS parents
                     ON parents.study_id = study.parent_study_id
@@ -261,6 +261,7 @@ SELECT
     ) AS item_name,
     mv.item_oid_multi_original,
     mv.item_name_multi_original,
+    mv.item_response_order_multi,
     metadata_no_multi.item_units,
     metadata_no_multi.item_data_type,
     metadata_no_multi.item_response_type,
@@ -278,7 +279,7 @@ SELECT
     metadata_no_multi.item_required,
     metadata_no_multi.item_default_value,
     metadata_no_multi.item_response_layout,
-    metadata_no_multi.item_width_decimal,
+    metadata_no_multi.item_widh_decimal,
     metadata_no_multi.item_show_item,
     metadata_no_multi.item_scd_item_oid,
     metadata_no_multi.item_scd_item_option_value,
@@ -291,6 +292,7 @@ FROM
         SELECT
             mnm.item_oid  AS item_oid_multi_original,
             mnm.item_name AS item_name_multi_original,
+            response_sets.option_order AS item_response_order_multi,
             format(
                     $$%1$s_%2$s$$,
                     mnm.item_oid,
@@ -332,6 +334,7 @@ FROM
             DISTINCT ON (metadata_no_multi.item_oid)
             metadata_no_multi.item_oid  AS item_oid_multi_original,
             metadata_no_multi.item_name AS item_name_multi_original,
+            NULL AS item_response_order_multi,
             metadata_no_multi.item_oid,
             metadata_no_multi.item_name
         FROM
