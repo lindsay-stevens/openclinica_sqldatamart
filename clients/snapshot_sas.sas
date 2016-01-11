@@ -20,9 +20,9 @@
        SAS can send filters with single or dollar quoting for strings.
 */;
 /* variables to set start */;
-%LET filter_study_name_schema=;
-%LET snapshotdir=;
-%LET odbc_string_or_file_dsn_path=;
+%LET filter_study_name_schema=cease;
+%LET snapshotdir=C:/Users/Lstevens/Desktop/testout;
+%LET odbc_string_or_file_dsn_path=filedsn=C:/Users/Lstevens/Documents/repos/openclinica_sqldatamart/clients/example.dsn;
 %LET data_filter_string=;
 /* variables to set end */;
 LIBNAME snapshot "&snapshotdir"; RUN;

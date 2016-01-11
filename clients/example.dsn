@@ -1,7 +1,8 @@
 [ODBC]
-DATABASE=openclinica_fdw_db
+# Driver: 32-bit "PostgreSQL Unicode", or 64 bit "PostgreSQL Unicode(x64)"
 DRIVER=PostgreSQL Unicode(x64)
-SERVER=127.0.0.1
+DATABASE=openclinica_fdw_db
+SERVER=localhost
 PORT=5435
 Uid=postgres
 Pwd=password
