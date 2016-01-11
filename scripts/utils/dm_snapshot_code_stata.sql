@@ -103,6 +103,7 @@ CREATE OR REPLACE FUNCTION public.dm_snapshot_code_stata(
                     WHERE mcii.item_oid = drsl.item_oid
                 )
                 AND mcii.item_data_type = 'INT'
+                AND mcii.item_response_type NOT IN ($$checkbox$$, $$multi-select$$)
             
             /* FORMAT ALL STRINGS - DISPLAY AS %20s */
             UNION ALL

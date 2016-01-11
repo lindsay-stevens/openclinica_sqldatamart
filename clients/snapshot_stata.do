@@ -20,7 +20,7 @@
 /* variables to set start */
 local filter_study_name_schema= "cease"
 local snapshotdir = "C:/Users/Lstevens/Desktop/testout"
-local odbc_string_or_file_dsn_path = "filedsn=//SVR-NAS/Public/VHCRP/General/OpenClinica/11_Reporting/sqldatamart/vhcrp_deployment/clients/ocdm-x64.dsn"
+local odbc_string_or_file_dsn_path = "filedsn=C:/Users/Lstevens/Documents/repos/openclinica_sqldatamart/clients/example.dsn"
 local data_filter_string = ""
 /* variables to set end */
 local exec1 = "SELECT public.dm_snapshot_code_stata('`filter_study_name_schema''::text"
