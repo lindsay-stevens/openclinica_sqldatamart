@@ -42,8 +42,16 @@ itemgroup_objects__naming_decision AS (
 /* If item_names are long, use item_oid instead of item name and description */
 SELECT 
   meta.study_name,
+  meta.crf_version_oid, 
+  /* TODO: return rows for only the most recent crf version,
+              otherwise there are duplicate columns in the output  */
   meta.item_group_oid,
-  meta.item_oid,
+  CASE
+    WHEN meta.item_oid_multi_original IS NULL
+    THEN meta.item_oid
+    ELSE meta.item_oid_multi_original
+  END AS item_oid,
+  meta.item_oid_multi_original,
   lower(meta.item_name) AS item_name,
   lower(
     CASE
@@ -59,6 +67,8 @@ SELECT
   meta.item_data_type,
   meta.item_response_type,
   meta.item_response_order_multi,
+  rsl.option_value AS option_value_multi,
+  rsl.option_text AS option_text_multi,
   max(meta.item_response_set_label) as item_response_set_label
 FROM dm.metadata_study AS dmms
 INNER JOIN dm.metadata_crf_ig_item AS meta 
@@ -77,15 +87,25 @@ GROUP BY metadata.study_name
 ) AS use_item_oid 
   ON meta.study_name = use_item_oid.study_name
 
+LEFT JOIN dm.response_set_labels AS rsl
+  ON rsl.study_name = meta.study_name
+  AND rsl.crf_version_oid = meta.crf_version_oid
+  AND rsl.item_oid = meta.item_oid_multi_original
+  AND rsl.option_order = meta.item_response_order_multi
+
 GROUP BY
   meta.study_name,
+  meta.crf_version_oid,
   meta.item_group_oid,
   meta.item_oid,
+  meta.item_oid_multi_original,
   meta.item_name,
   meta.item_description,
   meta.item_data_type,
   meta.item_response_type,
   meta.item_response_order_multi,
+  rsl.option_value,
+  rsl.option_text,
   use_item_oid.use_item_oid
 ORDER BY
   meta.study_name,
@@ -137,14 +157,17 @@ SELECT
             )
           END,
           format(
-            /* For multi-values, add function to pick by index from CSV. */
+            /* For multi-values, return if target value is in the values list. */
             $fmt$CAST(%1$s AS %2$s)$fmt$,
             CASE
               WHEN naming_decision.item_response_type IN ('multi-select', 'checkbox')
                 AND naming_decision.item_response_order_multi IS NOT NULL
               THEN format(
-                $arr$(string_to_array(item_value, ','))[%1$s]$arr$,
-                naming_decision.item_response_order_multi
+                $arr$CASE
+                       WHEN string_to_array(item_value, ',') @> ARRAY['%1$L']
+                       THEN '%1$L'
+                     END$arr$,
+                naming_decision.option_value_multi
                 )
               ELSE 'item_value'
             END,
@@ -179,12 +202,12 @@ SELECT
                   CASE
                     WHEN item_value ~ $re$^[\s]*?$$re$
                     THEN NULL %2$s
-                    ELSE option_text 
+                    ELSE %3$s
                   END
                 )
               ELSE NULL 
               END
-            ) AS %3$s_label
+            ) AS %4$s_label
             $fmt$, 
             naming_decision.item_oid,
             CASE
@@ -192,10 +215,26 @@ SELECT
               THEN NULL
               ELSE format(
                 $fmt$
-                  WHEN item_value IN (%1$s) THEN NULL
+                  WHEN item_value IN (%1$s)
+                  THEN NULL
                 $fmt$,
                 crf_nulls.crf_null_values
               )
+            END,
+            CASE
+              WHEN naming_decision.item_response_type IN ('multi-select', 'checkbox')
+                AND naming_decision.item_response_order_multi IS NOT NULL
+              THEN format(
+                $arr$CASE
+                       WHEN string_to_array(item_value, ',') @> ARRAY[%1$L]
+                       THEN %2$s
+                       ELSE NULL
+                     END
+                $arr$,
+                naming_decision.option_value_multi,
+                naming_decision.option_text_multi
+              )
+              ELSE 'option_text'
             END,
             naming_decision.item_name_hint
           )
