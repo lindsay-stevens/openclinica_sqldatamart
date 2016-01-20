@@ -9,6 +9,7 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_response_set_labels()
             md.study_name,
             md.crf_parent_name,
             md.crf_version,
+            md.crf_version_oid,
             md.item_group_oid,
             md.item_group_name,
             md.item_form_order,
