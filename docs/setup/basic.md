@@ -85,8 +85,14 @@ host openclinica     ocdm_fdw             ocdmIPAddress/32         md5
 
 ### Install PostgreSQL on OCDM
 - Use the Windows installer from postgresql.org.
+- For Linux, please see the following section for the necessary commands.
 - Complete the optional installation of pgAgent job scheduler
 - Choose a good password for the postgres superuser and keep it secret.
+
+On both Windows and Linux, the PostgreSQL listening port must be unique. If 
+the OCDM server is being installed on the same machine as OC, it will be 
+necessary to change the PostgreSQL listening port as it is likely that the 
+default port (5432) is already in use.
 
 There seemed to be a bug in the postgres installation when using double quote 
 characters in the password. The *data* directory would fail to be created. Use 
@@ -94,6 +100,41 @@ lots of other characters instead.
 
 For the basic setup it is assumed that the pg_agent service will run as the 
 postgres superuser. If this is not desired, see the advanced setup.
+
+
+#### Linux Installation
+On Debian, PostgreSQL can be installed using apt-get, for example:
+
+```bash
+apt-get update
+cd /etc/apt/sources.list.d/
+vi pgdg.list
+deb http://apt.postgresql.org/pub/repos/apt/ squeeze-pgdg main
+wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
+apt-get update
+apt-get install postgresql-9.4
+```
+
+The installation script will configure PostgreSQL 9.x to listen on port 5433, 
+because PostgreSQL 8.4 is already listening on port 5432. Another change will 
+be that both version are started and stopped at the same time, because they are 
+treated as a cluster. In /etc/init.d you will have one *postgresql* script with 
+which you can start or stop both services.  For example 
+*/etc/init.d/postgresql start* will have as output:  
+
+```bash
+/etc/init.d/postgresql start
+Starting PostgreSQL 8.4 database server: main.
+Starting PostgreSQL 9.4 database server: main.
+```
+
+Or to display the ports:
+
+```bash
+./postgresql status
+8.4/main (port 5432): online
+9.4/main (port 5433): online
+```
 
 
 ### Create postgres OpenClinica Report Database
