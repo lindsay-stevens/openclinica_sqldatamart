@@ -43,8 +43,6 @@ itemgroup_objects__naming_decision AS (
 SELECT 
   meta.study_name,
   meta.crf_version_oid, 
-  /* TODO: return rows for only the most recent crf version,
-              otherwise there are duplicate columns in the output  */
   meta.item_group_oid,
   CASE
     WHEN meta.item_oid_multi_original IS NULL
@@ -71,7 +69,24 @@ SELECT
   rsl.option_text AS option_text_multi,
   max(meta.item_response_set_label) as item_response_set_label
 FROM dm.metadata_study AS dmms
-INNER JOIN dm.metadata_crf_ig_item AS meta 
+INNER JOIN ( SELECT 
+               tab.study_name, tab.crf_version_oid, tab.item_oid_multi_original, tab.item_response_order_multi,
+               tab.item_group_oid, tab.item_oid, tab.item_name, tab.item_description, tab.item_data_type,
+               tab.item_response_type, tab.item_response_set_label, tab.item_form_order
+             FROM   dm.metadata_crf_ig_item  tab
+             WHERE  ( tab.study_name, 
+                      tab.item_group_oid,
+                      tab.crf_version_version_id
+                    ) IN
+                    ( SELECT 
+                        mrv.study_name,
+                        mrv.item_group_oid,
+                        max(mrv.crf_version_version_id)
+                      FROM dm.metadata_crf_ig_item  mrv
+                      GROUP BY mrv.study_name,
+                               mrv.item_group_oid
+                    )
+           )  AS meta 
   ON meta.study_name = dmms.study_name
 LEFT JOIN ( 
 
@@ -164,8 +179,8 @@ SELECT
                 AND naming_decision.item_response_order_multi IS NOT NULL
               THEN format(
                 $arr$CASE
-                       WHEN string_to_array(item_value, ',') @> ARRAY['%1$L']
-                       THEN '%1$L'
+                       WHEN string_to_array(item_value, ',') @> ARRAY[%1$L]
+                       THEN %1$L
                      END$arr$,
                 naming_decision.option_value_multi
                 )
@@ -227,7 +242,7 @@ SELECT
               THEN format(
                 $arr$CASE
                        WHEN string_to_array(item_value, ',') @> ARRAY[%1$L]
-                       THEN %2$s
+                       THEN %2$L
                        ELSE NULL
                      END
                 $arr$,
