@@ -20,6 +20,7 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_metadata_crf_ig_item()
             crf_version_oid,
             crf_version_date_created,
             crf_version_date_updated,
+            crf_version_version_id,
             crf_section_label,
             crf_section_title,
             item_group_oid,
