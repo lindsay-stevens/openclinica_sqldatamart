@@ -1,9 +1,13 @@
 # Changelog
 
 ## (HEAD -> master)
-- [b85028a](https://github.com/lindsay-stevens-kirby/openclinica_sqldatamart/commit/b85028a82699adb1e7fb6d09ec0fbd77bd7d1c81) doc: add commit view links manually in script
+- [9bde059](https://github.com/lindsay-stevens-kirby/openclinica_sqldatamart/commit/9bde05922c1700694453d6e71141440af877b880) fix: set search path for stata script function
 
 ## (github/master)
+- [9c479f3](https://github.com/lindsay-stevens-kirby/openclinica_sqldatamart/commit/9c479f39d6b96431bd7e1b38add4c8a50ccf6a1e) add: docs presentation files which may be useful
+- [6f1e7c6](https://github.com/lindsay-stevens-kirby/openclinica_sqldatamart/commit/6f1e7c668cd43360c3961a0a3090bdb560d17943) add: details on access vba script in docs
+- [eab4de7](https://github.com/lindsay-stevens-kirby/openclinica_sqldatamart/commit/eab4de7925320c334ce7456fa9e031dd13f43c14) doc: generate changelog using updated script
+- [b85028a](https://github.com/lindsay-stevens-kirby/openclinica_sqldatamart/commit/b85028a82699adb1e7fb6d09ec0fbd77bd7d1c81) doc: add commit view links manually in script
 - [7408f24](https://github.com/lindsay-stevens-kirby/openclinica_sqldatamart/commit/7408f24cbaac6135a3d76fe1ea0d2ddfee5832b7) chg: link for changelog in main docs readme
 - [908a282](https://github.com/lindsay-stevens-kirby/openclinica_sqldatamart/commit/908a28267b09e284578bee6209ce1a0cb7e60699) new: generated changelog for overview of changes
 - [51cde68](https://github.com/lindsay-stevens-kirby/openclinica_sqldatamart/commit/51cde688e227212a4ae4265e90e73da3237c326a) new: script for generating lazy changelog
