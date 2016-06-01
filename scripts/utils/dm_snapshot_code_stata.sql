@@ -8,6 +8,7 @@ CREATE OR REPLACE FUNCTION public.dm_snapshot_code_stata(
   $BODY$
     DECLARE r RECORD;
     BEGIN
+        EXECUTE format('SET LOCAL search_path TO %1$s', filter_study_name_schema);
         RETURN QUERY
         WITH views AS (
                 SELECT
@@ -42,7 +43,7 @@ CREATE OR REPLACE FUNCTION public.dm_snapshot_code_stata(
         ), dm_metadata_study AS (
             SELECT
                 study_name
-            FROM dm.metadata_study
+            FROM metadata_study
             WHERE study_name_clean = filter_study_name_schema
         ), label_cmds AS (
         
@@ -55,7 +56,7 @@ CREATE OR REPLACE FUNCTION public.dm_snapshot_code_stata(
             ) AS cmd,
             lower(item_group_oid) AS relname,
             21 AS suborder
-            FROM dm.metadata_crf_ig_item
+            FROM metadata_crf_ig_item
             INNER JOIN dm_metadata_study AS dms
                 ON metadata_crf_ig_item.study_name = dms.study_name
             
@@ -70,14 +71,14 @@ CREATE OR REPLACE FUNCTION public.dm_snapshot_code_stata(
             ) AS cmd,
             lower(item_group_oid) AS relname,
             22 AS suborder
-            FROM dm.response_set_labels AS drsl
+            FROM response_set_labels AS drsl
             INNER JOIN dm_metadata_study AS dms
                 ON drsl.study_name = dms.study_name
             WHERE 
                 EXISTS (
                     SELECT
                         item_oid
-                    FROM dm.metadata_crf_ig_item AS mcii
+                    FROM metadata_crf_ig_item AS mcii
                     WHERE
                         drsl.item_oid = mcii.item_oid
                         AND mcii.item_data_type = 'INT'
@@ -92,14 +93,14 @@ CREATE OR REPLACE FUNCTION public.dm_snapshot_code_stata(
             ) AS cmd,
             lower(item_group_oid) AS relname,
             23 AS suborder
-            FROM dm.metadata_crf_ig_item AS mcii
+            FROM metadata_crf_ig_item AS mcii
             INNER JOIN dm_metadata_study AS dms
                 ON mcii.study_name = dms.study_name
             WHERE 
                 EXISTS (
                     SELECT 
                         item_oid 
-                    FROM dm.response_set_labels AS drsl
+                    FROM response_set_labels AS drsl
                     WHERE mcii.item_oid = drsl.item_oid
                 )
                 AND mcii.item_data_type = 'INT'
@@ -110,7 +111,7 @@ CREATE OR REPLACE FUNCTION public.dm_snapshot_code_stata(
                 $line$quietly ds, has(type string)$line$,
                 lower(item_group_oid) AS relname,
                 24 AS suborder
-            FROM dm.metadata_crf_ig_item AS mcii
+            FROM metadata_crf_ig_item AS mcii
             INNER JOIN dm_metadata_study AS dms
                 ON mcii.study_name = dms.study_name
             UNION ALL
@@ -118,7 +119,7 @@ CREATE OR REPLACE FUNCTION public.dm_snapshot_code_stata(
                 $line$quietly format `r(varlist)' %20s$line$,
                 lower(item_group_oid) AS relname,
                 25 AS suborder
-            FROM dm.metadata_crf_ig_item AS mcii
+            FROM metadata_crf_ig_item AS mcii
             INNER JOIN dm_metadata_study AS dms
                 ON mcii.study_name = dms.study_name
         ), item_group_rows AS (
@@ -240,4 +241,4 @@ CREATE OR REPLACE FUNCTION public.dm_snapshot_code_stata(
         RETURN;
     END;
     $BODY$
-LANGUAGE plpgsql STABLE;
+LANGUAGE plpgsql VOLATILE;
