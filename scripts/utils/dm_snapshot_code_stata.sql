@@ -52,7 +52,11 @@ CREATE OR REPLACE FUNCTION public.dm_snapshot_code_stata(
             format(
                 $line$lab var %1$s "%2$s"$line$,
                 lower(item_name),
-                item_description    
+                /* Replace double quote with single, and remove line breaks. */
+                regexp_replace(
+                  replace(item_description, $$"$$, $$'$$), 
+                  $r$[\r\n]+$r$, $$ $$, $$g$$
+                )
             ) AS cmd,
             lower(item_group_oid) AS relname,
             21 AS suborder
@@ -67,7 +71,11 @@ CREATE OR REPLACE FUNCTION public.dm_snapshot_code_stata(
                 $line$lab def %1$s_lbl %2$s "%3$s", modify$line$,
                 lower(item_name),
                 option_value,
-                option_text
+                /* Replace double quote with single, and remove line breaks. */
+                regexp_replace(
+                  replace(option_text, $$"$$, $$'$$), 
+                  $r$[\r\n]+$r$, $$ $$, $$g$$
+                )
             ) AS cmd,
             lower(item_group_oid) AS relname,
             22 AS suborder
