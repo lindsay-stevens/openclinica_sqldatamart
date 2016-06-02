@@ -1,9 +1,11 @@
 # Changelog
 
-## (HEAD -> master)
-- [9bde059](https://github.com/lindsay-stevens-kirby/openclinica_sqldatamart/commit/9bde05922c1700694453d6e71141440af877b880) fix: set search path for stata script function
+## (HEAD -> master, tag: 2016.002)
+- [4787b5b](https://github.com/lindsay-stevens-kirby/openclinica_sqldatamart/commit/4787b5bb577f2bcf02badf5e5d56a7d4a0b7c72e) fix: strip newlines and swap double quotes in stata script
 
-## (github/master)
+## (tag: 2016.001, github/master)
+- [f1cdc36](https://github.com/lindsay-stevens-kirby/openclinica_sqldatamart/commit/f1cdc3682461901e095da40db69028cd822971e9) add: update changelog and bump version number
+- [9bde059](https://github.com/lindsay-stevens-kirby/openclinica_sqldatamart/commit/9bde05922c1700694453d6e71141440af877b880) fix: set search path for stata script function
 - [9c479f3](https://github.com/lindsay-stevens-kirby/openclinica_sqldatamart/commit/9c479f39d6b96431bd7e1b38add4c8a50ccf6a1e) add: docs presentation files which may be useful
 - [6f1e7c6](https://github.com/lindsay-stevens-kirby/openclinica_sqldatamart/commit/6f1e7c668cd43360c3961a0a3090bdb560d17943) add: details on access vba script in docs
 - [eab4de7](https://github.com/lindsay-stevens-kirby/openclinica_sqldatamart/commit/eab4de7925320c334ce7456fa9e031dd13f43c14) doc: generate changelog using updated script
