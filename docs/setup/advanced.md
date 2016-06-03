@@ -160,6 +160,45 @@ use of SSPI authentication for user connections to the database, and allows
 control over the level of permissions associated with the account running these 
 services.
 
+The account must be set as the service principal for the postgres service on 
+the domain. The service name doesn't have to be "postgres". The format of the 
+command to set the SPN on the domain controller is as follows. The command 
+must be issued by a user with domain administrator privileges (or at least, 
+the permission to set service principals).
+
+```bat
+setspn -S SERVICENAME/my.server.fqdn DOMAINNAME\username
+```
+
+A user on the same domain should be able to check whether this was successful 
+by issuing the following query in a command prompt. The result may take a few 
+moments but the above "SERVICENAME/my.server.fqdn" result should be returned.
+
+```bat
+setspn -L DOMAINNAME\username
+```
+
+The selected SERVICENAME must be provided as a connection parameter by each 
+client in order for the client to authenticate using Kerberos. If the 
+SERVICENAME is not provided as a connection parameter, postgres allows fallback 
+to NTLM authentication, which may or may not be allowed by the domain settings.
+
+The SERVICENAME parameter is provided in the connection parameter "krbsrvname". 
+This can be provided in the connection string, or set as a default for all 
+connections by that client by setting it in an environment variable named 
+"PGKRBSRVNAME". 
+
+Note that as of 9.5.02, the psqlODBC driver doesn't yet support sending this 
+variable, but it should work for other clients, for example psql-based clients 
+such as pgAdmin. There is also the "~/.pg_service" method described in the 
+postgresql documentation, as an alternative way to set connection defaults 
+without altering environment variables.
+
+The PostgreSQL documentation mentions in the section on SSPI that it operates 
+in the same way as GSSAPI. One important difference is that a keytab file is 
+not required if the OCDM server is a Windows server. A Windows server will 
+manage the authentication aspects that the keytab file performs on Linux.
+
 
 ### Install PostgreSQL on OCDM
 - Use the Windows installer from postgresql.org.
