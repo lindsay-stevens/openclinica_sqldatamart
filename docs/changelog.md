@@ -1,9 +1,17 @@
 # Changelog
 
-## (HEAD -> master, tag: 2016.002)
+## (HEAD -> master)
+- [a239e8d](https://github.com/lindsay-stevens-kirby/openclinica_sqldatamart/commit/a239e8d4afe3b99491753ffccc4811189f3620b7) add: document planning new naming strategy
+
+## (github/master)
+- [16518a0](https://github.com/lindsay-stevens-kirby/openclinica_sqldatamart/commit/16518a0d8e001558fdd8b2aaf277e28b0926ada5) add: detail about windows sspi auth
+- [59f0b8d](https://github.com/lindsay-stevens-kirby/openclinica_sqldatamart/commit/59f0b8d9ae3ef2defd1380551bdc24a9d3664dcf) add: documentation for the stata snapshot script
+- [9c22d9a](https://github.com/lindsay-stevens-kirby/openclinica_sqldatamart/commit/9c22d9a38db7f28bb9e285b15552ad7bf7810504) chg: update version file and changelog
+
+## (tag: 2016.002)
 - [4787b5b](https://github.com/lindsay-stevens-kirby/openclinica_sqldatamart/commit/4787b5bb577f2bcf02badf5e5d56a7d4a0b7c72e) fix: strip newlines and swap double quotes in stata script
 
-## (tag: 2016.001, github/master)
+## (tag: 2016.001)
 - [f1cdc36](https://github.com/lindsay-stevens-kirby/openclinica_sqldatamart/commit/f1cdc3682461901e095da40db69028cd822971e9) add: update changelog and bump version number
 - [9bde059](https://github.com/lindsay-stevens-kirby/openclinica_sqldatamart/commit/9bde05922c1700694453d6e71141440af877b880) fix: set search path for stata script function
 - [9c479f3](https://github.com/lindsay-stevens-kirby/openclinica_sqldatamart/commit/9c479f39d6b96431bd7e1b38add4c8a50ccf6a1e) add: docs presentation files which may be useful
