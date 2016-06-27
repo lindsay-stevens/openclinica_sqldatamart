@@ -48,6 +48,31 @@ label strings so that the generated commands are valid:
   - Replace newline / line return characters with a space.
 
 
+### Site XLSX Extension
+At the end of a study, it is often required to provide participating 
+institutions with a copy of the data that they had submitted for the study, 
+ideally in an easily readable format.
+
+In order to facilitate this, an extension to the above Stata snapshot code has 
+been developed. Each of the study item group data sets is exported to Excel 
+XLSX, filtered for that site. Study metadata and subject listings are also 
+included.
+
+The extension script "snapshot_stata_site_xlsx_extension.do" is filed in the 
+"clients" folder with the main script. As described in the comments, the 
+procedure is to:
+- Run the main script to generate (but not run) the snapshot code, 
+- Perform a simple find/replace, 
+- Insert the extension code (and update the study schema name therein),
+- Run the modified snapshot code script.
+
+The Excel files will be saved in folders named according to the site oid.
+
+At some stage this functionality may be incorporated into the main snapshot  
+script, so that this site export mode can be invoked from the main script 
+by providing parameter / flag.
+
+
 ## Stata 14 Issue
 A minor issue with Stata 14 and ODBC data was noted. Some columns, in 
 particular the "event_name" column, are intepreted by Stata 14 as the new 
