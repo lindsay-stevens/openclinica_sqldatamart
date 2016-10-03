@@ -18,7 +18,7 @@
 # - perl re: remove sequences of 2 or more spaces (from git log trunc padding).
 # - perl re: remove any NUL chars added during LF processing steps.
 
-url=https://github.com/lindsay-stevens-kirby/openclinica_sqldatamart/commit/
+url=https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/
 git log --pretty=format:"%+d%+h]($url%H) %<(80,trunc)%s" |
  perl -lpe's/( \(.*\))/##$1/g' |
  perl -0 -lpe's/\n(\n[a-z0-9])/$1/g' |
