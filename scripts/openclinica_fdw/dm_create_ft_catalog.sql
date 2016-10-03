@@ -51,7 +51,6 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_ft_catalog()
                                   reltuples real,
                                   relallvisible integer,
                                   reltoastrelid oid,
-                                  reltoastidxid oid,
                                   relhasindex boolean,
                                   relisshared boolean,
                                   relpersistence "char",
