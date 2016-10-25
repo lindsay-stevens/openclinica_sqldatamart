@@ -103,3 +103,4 @@ It's somewhat annoying, but on the bright side, since these names are based on c
 
 The necessary edits have already been applied to a copy of the export script in "stata_output/snapshot_stata_code_modified.do", at lines 153, 154, 167 and 168. This modified script can be run to generate the ".DTA" export, or if you don't have Stata, the generated files are in the archive "stata_output.7z". Many other statistical software packages have utilities to import Stata format files if you'd like to view them.
 
+At the point where extracts are being done it's a bit late, but establishing a study design conventions document and training users in that can help avoid these kind of interoperability issues for systems frequently used at an institution.

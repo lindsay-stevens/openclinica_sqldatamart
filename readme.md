@@ -2,9 +2,9 @@
 
 
 ## Introduction
-This project is community developed project to enable users to create powerful and streamlined queries and reports. By connecting directly to the OpenClinica backend database, all information stored by the application can be leveraged for analysis and study management.
+This is community developed project to enable users to create powerful and streamlined queries and reports. By connecting directly to the OpenClinica backend database, all information stored by the application can be leveraged for analysis and study management tools.
 
-The documentation describes two kinds of deployment settings:
+The documentation describes two kinds of deployment scenarios:
 
 - Basic: for one-off data dumps or single-user reporting environments,
 - Advanced: for establishing a secure, high-performance, multi-user environment.
@@ -22,4 +22,4 @@ For additional information and installation instructions, please refer to the [d
 ## Demo
 If you want to try out the basic deployment on your local machine, to see what is involved and what sort of data is available, please refer to the instructions filed under [docs/demo/basic_setup_using_juno](docs/demo/basic_setup_using_juno). 
 
-This demo uses the JUNO test database to build Community DataMart and demonstrate the client tools using the Stata export script as an example.
+This demo uses the JUNO test database to build Community DataMart and demonstrate the client tools using the Stata export script as an example. The JUNO database is currently deployed in the demonstration instance for OpenClinica, which is managed by OpenClinica LLC and is accessible at: https://demo.eclinicalhosting.com.

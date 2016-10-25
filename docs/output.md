@@ -8,6 +8,7 @@
   + [Item Columns](#item-columns)
   + [Item Group Views](#item-group-views)
 - [Example Output for a Study Schema](#example-output-for-a-study-schema)
+- [An Ugly System Diagram](#an-ugly-system-diagram)
 
 
 ## Core Objects
@@ -121,4 +122,8 @@ alias view, this column would be renamed to "myitem".
 
 
 ## Example Output for a Study Schema
-[[images/example_output_for_a_study.png]]
+![Example output](images/example_output_for_a_study.png)
+
+
+## An Ugly System Diagram
+![System diagram](images/sqldatamart_overview.png)
