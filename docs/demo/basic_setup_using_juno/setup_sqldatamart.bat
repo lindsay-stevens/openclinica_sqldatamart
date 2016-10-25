@@ -28,7 +28,7 @@ set foreign_server_user_password=password
 set foreign_server_openclinica_schema_name=public
 :: extra kwargs for the foreign server connection. comment out if this line if not used.
 ::set "foreign_server_data_wrapper_kwargs=, sslmode 'verify-full', sslrootcert 'root.crt'"
-:: path to this batch file
+:: path to the repository root folder
 set "scripts_path=C:\Users\Lstevens\Documents\repos\openclinica\openclinica_sqldatamart"
 
 :: uncomment these two lines to remove the database if re-running the build
@@ -62,4 +62,3 @@ for /r "%scripts_path%"\scripts %%F in (*.sql) do (
     -P pager
 :: print the start time and the current time
 echo %start_time% %time%
-pause

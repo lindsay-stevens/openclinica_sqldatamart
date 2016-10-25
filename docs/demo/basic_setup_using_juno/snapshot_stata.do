@@ -19,7 +19,7 @@
 */
 /* variables to set start */
 local filter_study_name_schema= "the_juno_diabetes_study"
-local snapshotdir = "C:/Users/Lstevens/Documents/repos/openclinica/openclinica_sqldatamart/test/stata"
+local snapshotdir = "C:/Users/Lstevens/Documents/repos/openclinica/openclinica_sqldatamart/docs/demo/basic_setup_using_juno/stata_output"
 local odbc_string_or_file_dsn_path = "DRIVER={PostgreSQL Unicode(x64)};DATABASE=openclinica_fdw_db;UID=postgres;PWD=password;SERVER=localhost;PORT=5446;TextAsLongVarchar=0;UseDeclareFetch=0"
 local data_filter_string = ""
 /* variables to set end */
@@ -30,4 +30,4 @@ local exec4 = ",'`data_filter_string''::text)"
 odbc load, exec("`exec1'`exec2'`exec3'`exec4'") connectionstring("`odbc_string_or_file_dsn_path'")
 outsheet dm_snapshot_code_stata using "`snapshotdir'/snapshot_stata_code.do", nonames noquote replace
 clear
-do "`snapshotdir'/snapshot_stata_code.do"
+/* do "`snapshotdir'/snapshot_stata_code.do" */ 

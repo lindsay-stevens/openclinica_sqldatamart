@@ -1,6 +1,6 @@
 local odbc_string_or_file_dsn_path="DRIVER={PostgreSQL Unicode(x64)};DATABASE=openclinica_fdw_db;UID=postgres;PWD=password;SERVER=localhost;PORT=5446;TextAsLongVarchar=0;UseDeclareFetch=0"
 local data_filter_string=""
-local snapshotdir="C:/Users/Lstevens/Documents/repos/openclinica/openclinica_sqldatamart/test/stata"
+local snapshotdir="C:/Users/Lstevens/Documents/repos/openclinica/openclinica_sqldatamart/docs/demo/basic_setup_using_juno/stata_output"
 odbc load, exec("SELECT * FROM the_juno_diabetes_study.av_ig_adver_aelog `data_filter_string'") connectionstring("`odbc_string_or_file_dsn_path'")
 lab var ae_dton "AE Date of Onset"
 lab var ae_sev "AE Severity Grade"
@@ -150,8 +150,8 @@ save "`snapshotdir'/ig_demog_demo.dta"
 clear
 odbc load, exec("SELECT * FROM the_juno_diabetes_study.av_ig_diabe_diabetes `data_filter_string'") connectionstring("`odbc_string_or_file_dsn_path'")
 lab var retinopathy_mhstdat "Date of diagnosis"
-//lab var severe_hypoglycemic_reaction_mhoccur "Severe hypoglycemic reaction protocol-defined"
-//lab var severe_hypoglycemic_reaction_mhstdat "Date of most recent episode"
+lab var var36 "Severe hypoglycemic reaction (protocol-defined)"
+lab var var38 "Date of most recent episode"
 lab var sgoccur "Laser/photocoagulation therapy for diabetic retinopathy"
 lab var autonomic_neuropathy_mhoccur "Autonomic neuropathy"
 lab var autonomic_neuropathy_mhstdat "Date of diagnosis"
@@ -164,8 +164,8 @@ lab var diabetic_nephropathy_mhoccur "Diabetic nephropathy"
 lab var diabetic_nephropathy_mhstdat "Date of diagnosis"
 lab var insulin_cmoccur "Was the subject ever treated with continuous insulin therapy, i.e. more than 2 weeks?"
 lab var insulin_cmstdat "If 'Yes,' first start date of insulin treatment"
-//lab var other_diabetic_neuropathy_mhoccur "Other diabetic neuropathy"
-//lab var other_diabetic_neuropathy_mhstdat "Date of diagnosis"
+lab var var30 "Other diabetic neuropathy"
+lab var var32 "Date of diagnosis"
 quietly ds, has(type string)
 quietly format `r(varlist)' %20s
 save "`snapshotdir'/ig_diabe_diabetes.dta"
