@@ -58,7 +58,7 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_study_itemgroup_matviews(
                 item_group_oid
             FROM
                 (
-                    SELECT
+                    SELECT DISTINCT ON (study_name, event_oid, crf_version_oid)
                         metadata.study_name,
                         metadata.item_group_oid,
                         metadata.crf_null_values

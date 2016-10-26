@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_metadata_event_crf_ig()
         EXECUTE $query$
     CREATE MATERIALIZED VIEW dm.metadata_event_crf_ig AS
         SELECT
-            DISTINCT ON (study_name, event_oid, crf_version_oid)
+            DISTINCT ON (study_name, event_oid, crf_version_oid, item_group_oid)
             study_name,
             study_status,
             study_date_created,
