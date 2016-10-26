@@ -1,10 +1,18 @@
 # Changelog
 
-## (HEAD -> master)
-- [f620d6d](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/f620d6ddb579183d7295d695e47f78f046ce2788) add: test files with juno_study database
-- [91e3ac1](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/91e3ac1821da678134c2c8437f3c73929f9246d6) chg: remove pg_class ft column gone in 9.4+
+## (HEAD -> master, tag: 2016.4)
+- [f0f70c1](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/f0f70c1b41127c12b07c18b7307bc5cd01eebcdd) chg: metadata_event_crf_ig distinct add item group
 
 ## (nas/master, github/master)
+- [80beb33](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/80beb331e1514bdad9ba8dcb3cf7ffc6ea551338) chg: more documentation tidying
+- [68da42f](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/68da42f5d8c9a61633e168af89e7190c3022f124) chg: documentation updates
+- [895b588](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/895b58836ee8152c6912251317033e5c25aa6d12) add: full demo database archives
+- [4153f7d](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/4153f7d3e2b2aabf0ccba8a348a8dfc22c8a3202) add: files for setup from scratch
+
+## (tag: 2016.3)
+- [d466cf5](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/d466cf58425af38c57b3680dbb084ce04141e7ae) chg: update version and changelog
+- [f620d6d](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/f620d6ddb579183d7295d695e47f78f046ce2788) add: test files with juno_study database
+- [91e3ac1](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/91e3ac1821da678134c2c8437f3c73929f9246d6) chg: remove pg_class ft column gone in 9.4+
 - [39eeabb](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/39eeabb5c6701e2435557d1b4d9e25c72286f012) add: stata site xlsx extension for snapshots
 - [ff22a1d](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/ff22a1d14183ea042dbc4320a40453bc02c21055) add: update changelog
 - [a239e8d](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/a239e8d4afe3b99491753ffccc4811189f3620b7) add: document planning new naming strategy
