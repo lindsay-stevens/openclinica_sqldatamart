@@ -3,7 +3,6 @@
 
 ## Contents
 - [Introduction](#introduction)
-    - [Design Assumptions](#design-assumptions)
     - [Other Schedulers](#other-schedulers)
 - [Installation](#installation)
     - [Troubleshooting](#troubleshooting)
