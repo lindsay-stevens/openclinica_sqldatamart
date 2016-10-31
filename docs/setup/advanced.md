@@ -124,6 +124,31 @@ hostssl openclinica     ocdm_fdw             ocdmIPAddress/32         md5
 ```
 
 
+### Update the OC postgres Configuration File
+The postgres global configuration file (postgresql.conf) can be found in the postgres 
+data directory. Locate, uncomment and update parameters to the following values.
+
+- Under "Connections and Authentication: Security and Authentication":
+    - "ssl = on".
+        - Allows the datamart user from OCDM to use SSL / encrypted connections.
+        - This is "off" by default, and in deployments where all of OC is on the 
+          one server, this setting is usually "off". The setting may be "on" 
+          already if the OC setup has PostgreSQL on a separate server to Tomcat.
+    - "ssl_renegotiation_limit = 0"
+        - This parameter was deprecated in PostgreSQL 9.5, and so is only 
+          necessary if the OC PostgreSQL is 9.4 or earlier. It should be set to 
+          0 (off) because PostgreSQL 9.5 and later is confused by having SSL 
+          connections dropped for no apparent reason, thus causing maintenance 
+          job runs to fail.
+- Under "Resource Usage: Memory":
+    - These are optional settings and may provide a performance boost to the 
+      OpenClinica app. The suggested values are based on 4GB RAM available, and 
+      may have already been configured as part of OC deployment setup.
+    - "shared_buffers = 256MB"
+    - "work_mem = 8MB"
+    - "maintenance_work_mem = 256MB"
+
+
 ## Steps to Complete on OCDM Server
 
 
