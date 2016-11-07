@@ -1,109 +1,139 @@
-# Setup
+# Advanced Setup
 
 
-## Dependencies
-- PostgreSQL 9.3+
-- Win32 OpenSSL v1.0.0o Light (or any other software that can generate a CSR).
+## Contents
+- [Terminology](#terminology)
+- [Introduction](#introduction)
+- [OpenClinica PostgreSQL Configuration](#openclinica-postgresql-configuration)
+    - [OC1 Database Read-only Role](#oc1-database-read-only-role)
+    - [OC2 PostgreSQL Settings](#oc2-postgresql-settings)
+        - [OC2.1 Global Configuration (Optional)](#oc2-1-global-configuration-optional)
+        - [OC2.2 Connection Methods (Scenario 2 only)](#ocdm2-2-connection-methods-scenario-2-only)
+    - [OC3 Encrypted Connections](#oc3-encrypted-connections)
+        - [OC3.1 Certificate Files](#oc-3-1-certificate-files)
+        - [OC3.2 PostgreSQL Settings](#oc-3-2-postgresql-settings)
+- [DataMart PostgreSQL Configuration](#datamart-postgresql-configuration)
+    - [OCDM1 Install PostgreSQL](#ocdm1-install-postgresql)
+    - [OCDM2 Certificate Files](#ocdm2-certificate-files)
+    - [OCDM3 PostgreSQL Settings](#ocdm3-postresql-settings)
+        - [OCDM3.1 Global Configuration](#ocdm3-1-global-configuration)
+        - [OCDM3.2 Connection Methods](#ocdm3-2-connection-methods)
+        - [OCDM3.3 User Mappings](#ocdm3-3-user-mappings)
+    - [OCDM4 Build DataMart](#ocdm4-build-datamart)
+    - [OCDM5 Domain Service Account](#ocdm5-domain-service-account)
+        - [OCDM5.1 Domain Admin Tasks](#ocdm5-1-domain-admin-tasks)
+        - [OCDM5.2 Database Role](#ocdm5-2-database-role)
+        - [OCDM5.3 Database Runner](#ocdm5-3-database-runner)
+- [Certificate How To's](#certificate-how-to-s)
+    - [Prepare the CA certificate](#prepare-the-ca-certificate)
+    - [Get a New Certificate](#get-a-new-certificate)
+    - [Use Tomcat's Certificate](#use-tomcat-s-certificate)
 
 
-## Summary
-On OC server:
-- [Prepare OC Root Certificate](#prepare-oc-root-certificate)
-- [Create an OC Postgres Login Role for OCDM](#create-an-oc-postgres-login-role-for-ocdm)
-- [Update the OC postgres Host Based Authentication file](#update-the-oc-postgres-host-based-authentication-file)
+## Terminology
+The following terminology and abbreviations are used in this document.
 
-On OCDM server:
-- [Obtain OCDM Server TLS Certificate](#obtain-ocdm-server-tls-certificate)
-- [Prepare OCDM Root Certificate](#prepare-ocdm-root-certificate)
-- [Create a Domain Service Account for the OCDM PostgreSQL Services](#create-a-domain-service-account-for-the-ocdm-postgresql-services)
-- [Install PostgreSQL on OCDM](#install-postgresql-on-ocdm)
-- [Grant Windows Folder Permissions to the Domain Service Account](#grant-windows-folder-permissions-to-the-domain-service-account)
-- [Change Postgres Service Accounts](#change-postgres-service-accounts)
-- [Update the postgres User Name Map file](#update-the-postgres-user-name-map-file)
-- [Update the postgres Global User Configuration file](#update-the-postgres-global-user-configuration-file)
-- [Start the postgres service](#start-the-postgres-service)
-- [Create postgres OpenClinica Report Database](#create-postgres-openclinica-report-database)
-- [Create a postgres Login Role for the Domain Service Account](#create-a-postgres-login-role-for-the-domain-service-account)
+- "AD": Active Directory. The AD functions relevant to DataMart are LDAP user information, Kerberos authentication, and DNS records. For Linux, FreeIPA can provide these functions, or they can be done separately with OpenLDAP, Kerberos and BIND.
+- "DSA": Domain Service Account. An AD domain account created for the purpose of running the OCDM service.
+- "FQDN": Fully Qualified Domain Name. A name that maps to an IP address. "Fully Qualified" means that the whole name is provided (e.g. "ocdm.mydomain.org") rather than only part of it (e.g. "ocdm").
+- "OC": OpenClinica
+- "OCDM": OC Community DataMart
+- "PG": PostgreSQL
+- "PGDATA": the directory containing the PG server files, including all configuration files. By default it is named "data" and exists in the installation directory. For example: `C:\Program Files\PostgreSQL\9.6\data`.
+- "SSPI": a Windows-specific authentication interface supported by PG. For Linux, GSSAPI provides equivalent functionality for PG. Since SSPI supports both Kerberos authentication and the less secure NTLM protocol, the intended method for DataMart is specified as SSPI/Kerberos.
+- "pg_hba.conf": the PG Host-Based Authentication file. Configures the "how", "who", "to what", and "where from" of user connections to PG.
+- "pg_ident.conf": the PG User Name Maps file. Configures mappings of system user names to PG role names using pattern matching.
+- "postgresql.conf": the PG Global Configuration file. Stores all configuration data not covered by "pg_hba.conf" and "pg_ident.conf".
 
 
-## Steps to Complete on OC Server
+## Introduction
+This document describes how to deploy Community DataMart in an "Advanced" setting, which provides the following advantages over the "Basic" setup.
 
+- Improved performance by using separate PostgreSQL servers for OC and OCDM (with encrypted connections if they are on separate machines),
+- Encrypted connections between DataMart PostgreSQL and clients,
+- Integrated Authentication against Active Directory via SSPI/Kerberos.
 
-### Prepare OC Root Certificate
-Before opening a secure connection, a client should check the certificate 
-presented by the server. One of the checks is that it was issued by a trusted 
-certificate. It is common that a CA will issue a certificate using an 
-intermediate certificates that is issued by another certificate, and so on, and 
-these must also be checked.
+After completing this setup, continue to the "Maintenance" instruction document which describes how to keep DataMart up to date.
 
-Windows maintains a certificate store that has common CA root and intermediate 
-certificates, but the libpq library that postgres and psqlODBC use does not 
-currently interact with this store. Libpq currently only accepts one file for a 
-issuing certificate to use for checking the server certificate. When there are 
-intermediate certificates, these must be included in the same file.
-
-- Open the server certificate and inspect the *Certification Path* tab. A copy 
-  of all the issuing certificates above the server certificate is required, in 
-  PEM format. These should be available on the CA's website.
-- Create a file named *root.crt*, and paste in the intermediate certificate(s) 
-  and root certificate strings from the issuing certificates, such that the 
-  file looks like the following:
+The deployment scenarios described in this document are Scenarios 1 and 2, as illustrated below:
 
 ```
------BEGIN CERTIFICATE-----
-... intermediate certificate string ...
------END CERTIFICATE-----
------BEGIN CERTIFICATE-----
-... root certificate string ...
------END CERTIFICATE-----
+Scenario 1 (Best):
+  - Machine 1
+    - PostgreSQL Server 1
+      - OpenClinica
+  - Machine 2
+    - PostgreSQL Server 2
+      - DataMart
+
+Scenario 2 (OK):
+  - Machine 1
+    - PostgreSQL Server 1
+      - OpenClinica
+    - PostgreSQL Server 2
+      - DataMart
+
+Scenario 3 (Not so good, not covered):
+  - Machine 1
+    - PostgreSQL Server 1
+      - OpenClinica
+      - DataMart
 ```
 
-- Copy this *root.crt* file to the OCDM server, as OCDM will use it when 
-  connecting to OC.
+These instructions assume deployment on Windows Server. The Windows-specific parts are the syntax of command-line examples and the Active Directory integration. The AD integration includes running the DataMart PostgreSQL server with a domain account, and using AD for client authentication. It would be possible to set up DataMart in an equivalent manner on Linux, but until a guide is contributed here, look online for instructions for this and the enormous range of other authentication options.
+
+Some PostgreSQL configurations are suggestions relating to improving performance through adjusting resource allocation. This generally follows advice available online, for example:
+- [PG tuning advice for web applications](https://wiki.postgresql.org/wiki/Tuning_Your_PostgreSQL_Server)
+- [PgTune](https://github.com/gregs1104/pgtune)
+
+[Back to Contents](#contents)
 
 
-### Create an OC Postgres Login Role for OCDM
-In order to retrieve data, OCDM needs to be able to connect to OC, which 
-requires a login user on the OC postgres server. This server to server 
-connection requires password authentication, as it cannot use SSPI.
+## OpenClinica PostgreSQL Configuration
+Steps in this section should be done on the server where the OC PG server is installed. Referring to the deployment scenarios shown in the [Introduction](#introduction)), the following steps should be completed:
 
-- Log in to OC postgres as a superuser and run the following commands to create
-  a role with the necessary permissions:
+- Scenario 1: OC1, OC2.1, and OC3.
+- Scenario 2: OC1 and OC2.
+
+
+### OC1 Database Read-only Role
+In this step, a user will be created which has read-only access to the OC database. OCDM will connect as this user to retrieve data using foreign tables. Due to the design of foreign tables, this user can only use password authentication, not SSPI/Kerberos.
+
+- Connect to the OC database as a privileged user and run the following SQL, which creates a role with read-only permissions.
 
 ```sql
-CREATE ROLE "openclinica_select"
-    NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE;
+CREATE ROLE "openclinica_select" NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE;
 GRANT CONNECT ON DATABASE openclinica to openclinica_select;
 GRANT USAGE ON SCHEMA public to openclinica_select;
-```
 
-- For postgres 9.0+, the run the following command:
-
-```sql
+/* 
+In PostgreSQL 9.0+ the following temporary function call can be replaced with:
 GRANT SELECT ON ALL TABLES IN SCHEMA public to openclinica_select;
-```
+*/
 
-- For postgres <9.0, run the following commands:
-
-```sql
 CREATE FUNCTION public.grant_select_on_all_tables_in_schema()
-RETURNS VOID AS
-$$DECLARE r record;
+  RETURNS VOID AS $b$
+DECLARE r record;
 BEGIN
 FOR r IN
-    SELECT 'GRANT SELECT ON ' || relname || ' TO openclinica_select;' as grant
-    FROM pg_class JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace
-    WHERE nspname = 'public' AND relkind IN ('r', 'v')
+  SELECT 
+    $s$GRANT SELECT ON $s$ || relname || $s$ TO openclinica_select;$s$ as grant
+  FROM 
+    pg_class 
+  INNER JOIN pg_namespace 
+    ON pg_namespace.oid = pg_class.relnamespace
+  WHERE 
+    nspname = 'public' 
+    AND relkind IN ('r', 'v')
 LOOP
     EXECUTE r.grant;
 END LOOP;
-END;$$
-LANGUAGE plpgsql VOLATILE;
+END;$b$ LANGUAGE plpgsql VOLATILE;
 SELECT public.grant_select_on_all_tables_in_schema();
 DROP FUNCTION public.grant_select_on_all_tables_in_schema();
 ```
 
-- Run the following commands to create a login role for the connection:
+- Next, update the following command with a suitably good password. Then run the command, which creates a login role with the above permissions assigned to it.
 
 ```sql
 CREATE ROLE ocdm_fdw WITH LOGIN ENCRYPTED PASSWORD 'aGoodPassword'
@@ -112,241 +142,142 @@ GRANT openclinica_select TO ocdm_fdw;
 ```
 
 
-### Update the OC postgres Host Based Authentication file
-The Host Based Authentication file (pg_hba.conf) can be found in the postgres
-data directory.
-- Add a row to allow connections to OC from OCDM (in addition to existing local
-  rows, ensure there is no conflict):
-
-```
-# TYPE  DATABASE        USER                 ADDRESS                 METHOD
-hostssl openclinica     ocdm_fdw             ocdmIPAddress/32         md5
-```
+### OC2 PostgreSQL Settings
+The following sections describe steps for configuring connections from the OCDM user, and optional performance tuning suggestions.
 
 
-### Update the OC postgres Configuration File
-The postgres global configuration file (postgresql.conf) can be found in the postgres 
-data directory. Locate, uncomment and update parameters to the following values.
+#### OC2.1 Global Configuration (Optional)
+In `postgresql.conf`, if there is has been no previous performance tuning, the following suggestions may improve performance of OC. These values assume a machine with 2GB available (4GB total, minus 2GB for Tomcat).
 
-- Under "Connections and Authentication: Security and Authentication":
-    - "ssl = on".
-        - Allows the datamart user from OCDM to use SSL / encrypted connections.
-        - This is "off" by default, and in deployments where all of OC is on the 
-          one server, this setting is usually "off". The setting may be "on" 
-          already if the OC setup has PostgreSQL on a separate server to Tomcat.
-    - "ssl_renegotiation_limit = 0"
-        - This parameter was deprecated in PostgreSQL 9.5, and so is only 
-          necessary if the OC PostgreSQL is 9.4 or earlier. It should be set to 
-          0 (off) because PostgreSQL 9.5 and later is confused by having SSL 
-          connections dropped for no apparent reason, thus causing maintenance 
-          job runs to fail.
-- Under "Resource Usage: Memory":
-    - These are optional settings and may provide a performance boost to the 
-      OpenClinica app. The suggested values are based on 4GB RAM available, and 
-      may have already been configured as part of OC deployment setup.
-    - "shared_buffers = 256MB"
-    - "work_mem = 8MB"
-    - "maintenance_work_mem = 256MB"
-
-
-## Steps to Complete on OCDM Server
-
-
-### Obtain OCDM Server TLS Certificate
-The following uses OpenSSL for Windows to generate a Certificate Signing Request (CSR).
-
-- Install OpenSSL for Windows (available form Shining Light Productions)
-- Open a command prompt and run the following command to generate a CSR 
-  (output as *CSR.csr*) and private key (will be output as *server.key*), 
-  insert the subject (-subj) parameter details as appropriate:
-
-```
-C:\OpenSSL-Win32\bin\openssl.exe req -newkey rsa:4096 -sha512 -nodes -subj "/C=myCountry/ST=myState/L=myLocation/O=myOrg/OU=myOrgUnit/CN=myOCDM_FQDN" -out CSR.csr -keyout server.key
+```ini
+shared_buffers = 512MB  # RAM / 4. On Windows, max 512MB.
+work_mem = 16MB  # RAM / max_connections (default 100).
+maintenance_work_mem = 128MB  # RAM  / 16. Stay below 2GB.
+checkpoint_segments = 32  # reduce disk load in exchange for longer crash recovery time.
+checkpoint_completion_target = 0.7  # reduce disk load in exchange for longer crash recovery time.
+effective_cache_size = 1536MB  # (RAM * 3) / 4.
+default_statistics_target = 200  # increased for better query plans (default 100).
 ```
 
-- Send the CSR file to a Certificate Authority (CA) and request a certificate. 
-- Name the provided certificate file *server.crt*
-
-The secrecy of *server.key* and *server.crt* is very important so do not copy 
-them anywhere outside the server.
+Suggested logging settings can be copied from the section [OCDM3.1 Global Configuration](#ocdm3-1-global-configuration)
 
 
-### Prepare OCDM Root Certificate
-As was done for the OC server, a *root.crt* file will be needed for user 
-clients connecting to OCDM.
-
-- Create a *root.crt* file using the OCDM *server.crt* certification path.
-- Copy this *root.crt* file to each client.
-
-
-### Create a Domain Service Account for the OCDM PostgreSQL Services
-A domain service account is used for the postgres services, which allows the 
-use of SSPI authentication for user connections to the database, and allows 
-control over the level of permissions associated with the account running these 
-services.
-
-The account must be set as the service principal for the postgres service on 
-the domain. The service name doesn't have to be "postgres". The format of the 
-command to set the SPN on the domain controller is as follows. The command 
-must be issued by a user with domain administrator privileges (or at least, 
-the permission to set service principals).
-
-```bat
-setspn -S SERVICENAME/my.server.fqdn DOMAINNAME\username
-```
-
-A user on the same domain should be able to check whether this was successful 
-by issuing the following query in a command prompt. The result may take a few 
-moments but the above "SERVICENAME/my.server.fqdn" result should be returned.
-
-```bat
-setspn -L DOMAINNAME\username
-```
-
-The selected SERVICENAME must be provided as a connection parameter by each 
-client in order for the client to authenticate using Kerberos. If the 
-SERVICENAME is not provided as a connection parameter, postgres allows fallback 
-to NTLM authentication, which may or may not be allowed by the domain settings.
-
-The SERVICENAME parameter is provided in the connection parameter "krbsrvname". 
-This can be provided in the connection string, or set as a default for all 
-connections by that client by setting it in an environment variable named 
-"PGKRBSRVNAME". 
-
-Note that as of 9.5.02, the psqlODBC driver doesn't yet support sending this 
-variable, but it should work for other clients, for example psql-based clients 
-such as pgAdmin. There is also the "~/.pg_service" method described in the 
-postgresql documentation, as an alternative way to set connection defaults 
-without altering environment variables.
-
-The PostgreSQL documentation mentions in the section on SSPI that it operates 
-in the same way as GSSAPI. One important difference is that a keytab file is 
-not required if the OCDM server is a Windows server. A Windows server will 
-manage the authentication aspects that the keytab file performs on Linux.
-
-
-### Install PostgreSQL on OCDM
-- Use the Windows installer from postgresql.org.
-- Choose a good password for the postgres superuser and keep it secret.
-
-There seemed to be a bug in the postgres installation when using double quote 
-characters in the password. The *data* directory would fail to be created. Use 
-lots of other characters instead.
-
-
-### Grant Windows Folder Permissions to the Domain Service Account
-By default the *data* directory should be created at:
+#### OC2.2 Connection Methods (Scenario 2 only)
+In `pg_hba.conf`, add the following row to allow the OC role for OCDM to connect using a local unencrypted connection and a password.
 
 ```
-C:\Program Files\PostgreSQL\9.3\data 
+# TYPE   DATABASE             USER       ADDRESS        METHOD
+host     openclinica_fdw_db   ocdm_fdw   127.0.0.1/32   md5
 ```
 
-- Put a copy of the OCDM *server.key* and *server.crt*, and the OC *root.crt* 
-  in the *data* directory.
-- Find the data directory and assign *Full Control* of this directory to the 
-  OCDM domain service account. Right-click folder ; Properties ; Security ; 
-  Edit ; Add ; enter full domain service account name.
+
+### OC3 Encrypted Connections
 
 
-### Change Postgres Service Accounts
-- Open services.msc and stop the *postgresql-x64-9.3* service.
-- Open the service properties and change Log On to use the domain service 
-  account credentials
-- Remove the user folder that may have been created for the local postgres user 
-  during installation, located at:
+#### OC3.1 Certificate Files
+To use encrypted connections between OC PG and OCDM PG, the following files must be prepared and filed as follows. For a guide on preparing these files, refer to the section [Certificate How To's](#certificate-how-to-s).
 
-```
-C:\Users\postgres
-```
+- `server.crt`: the OC PG server public certificate. Put this in OC PGDATA.
+- `server.key`: the server private key. Put this in OC PGDATA.
 
-Do not start either service yet, there are more steps to complete.
+Unlike OCDM, a `root.crt` is not required in OC PGDATA because this file is used by clients to verify host certificates. OC PG is not connecting as a client to any other hosts for DataMart.
 
 
-### Update the postgres Host Based Authentication file (pg_hba.conf)
-The *pg_hba.conf* file is in the postgres data directory, and allows control 
-over connections to the database server. The following configuration allows 
-local connections for the postgres and domain service account login roles; the 
-former by password and the latter by SSPI. Additionally, secure remote 
-connections from domain users from the domain user IP range are allowed with 
-SSPI.
+#### OC3.2 PostgreSQL Settings
+Add or change the following OC PG configuration values.
 
-- Replace the default IPv4 and IPv6 rows with the following:
+- In `pg_hba.conf`, add the following row to allow the OC role for OCDM to connect over an encrypted connection. Ensure that the database name and OCDM IP address values are correct.
 
 ```
-# TYPE  DATABASE        USER                 ADDRESS                 METHOD
-host    all             postgres             127.0.0.1/32            md5
-host    all             myDomainServiceAccountName             127.0.0.1/32            sspi map=mapsspi include_realm=1 krb_realm=myDomain
-hostssl all             all                  domainUserIPRange          sspi map=mapsspi include_realm=1 krb_realm=myDomain
-host    all             postgres             ::1/128                 md5
-host    all             myDomainServiceAccountName             ::1/128                 sspi map=mapsspi include_realm=1 krb_realm=myDomain
+# TYPE    DATABASE      USER       ADDRESS      METHOD
+hostssl   openclinica   ocdm_fdw   OCDM_IP/32   md5
 ```
 
-SSPI uses the domain credentials of the user to establish authentication, i.e. 
-if the user is currently authenticated with the domain, they are trusted to 
-connect to the database with their domain user name.
-
-
-### Update the postgres User Name Map file
-The User Name Map file (pg_ident.conf) can be found in the postgres data 
-directory, and allows mapping between system and postgres login roles names.
-
-- Add a row to map domain account users to database usernames without the 
-  domain part:
+- In `postgresql.conf`, change the following value to enable encrypted connections.
 
 ```
-# MAPNAME       SYSTEM-USERNAME         PG-USERNAME
-mapsspi       /^(.*)@myDomain$          \1
+ssl = on
 ```
 
-This means that a client connecting with a domain account name of 
-*myUser*@*myDomain* is mapped to the postgres login role *myUser*. The case of 
-the postgres login role must match the case of the domain account name, e.g. 
-myuser=myuser, Myuser=Myuser, MYUSER=MYUSER.
-
-
-### Update the postgres Global User Configuration file
-The Global User Configuration file (postgres.conf) can be found in the postgres 
-data directory, and allows control over settings that affect the behaviour and 
-performance of the database server.
-
-Settings are disabled by appending a # symbol to the beginning of the line, so 
-remove the # symbol for the lines with the settings shown below. The comments 
-shown here do not need to be added to the *postgresql.conf* file.
-
-- Locate the rows with settings shown below and update the default values 
-  (adjust depending on expected connections and available ram, below is for 
-  4GB): 
+- In `postgresql.conf`, if OC PG is version 9.4 or earlier, change the following value.
+    - This setting disables SSL renegotiation, which was deprecated in PG 9.5 and causes the server to drop / renegotiate connections after a quantity of data (default 512MB) has been transferred.
+    - The default setting can cause OCDM maintenance jobs to fail, for example if OCDM PG is 9.5 or later and OC PG is 9.4 or earlier, OCDM PG will consider the connection termination for SSL renegotiation to be an error.
 
 ```
+ssl_renegotiation_limit = 0
+```
+
+[Back to Contents](#contents)
+
+
+## DataMart PostgreSQL Configuration
+Steps in this section should be done on the server where the OCDM PG server to be installed. Referring to the deployment scenarios shown in the [Introduction](#introduction)):
+
+- Both scenarios 1 and 2 require all steps to be completed.
+- If deploying to Linux or using an authentication method other than Active Directory, complete all steps except OCDM3.3, and all of OCDM5.
+
+
+### OCDM1 Install PostgreSQL
+Install the most recent PostgreSQL available. If the database service was started during installation, stop it for now as the next steps include updating settings which only take effect on server restart. 
+
+If using the EDB Installer for Windows, complete the optional installation on pgAgent, which will be used in the maintenance setup.
+
+
+### OCDM2 Certificate Files
+To use encrypted connections between OCDM PG and clients, the following 3 files must be prepared and filed as follows. For a guide on preparing these files, refer to [Certificate How To's](#certificate-how-to-s).
+
+- `server.crt`: the OCDM PG server public certificate. Put this in OCDM PGDATA.
+- `server.key`: the server private key. Put this in OCDM PGDATA.
+- `root.crt`: the public certificate of the institution that issued the OC PG `server.crt`, required to verify the authenticity of OC PG `server.crt`.
+
+The `root.crt` corresponding to OCDM PG's `server.crt` will need to be distributed to users / DataMart clients, as described in the "Clients" section of the OCDM documentation. In brief, the OCDM PG `root.crt` will go in the user's home folder, i.e.:
+
+- Windows: `%APPDATA%\postgresql\root.crt`, e.g. `C:\Users\Lindsay\AppData\Roaming\postgresql\root.crt`.
+- Linux: `~/.postgresql/root.crt`.
+
+
+### OCDM3 PostgreSQL Settings
+The following sections describe steps for configuring encrypted client connections, enhanced performance, and integrated authentication.
+
+
+#### OCDM3.1 Global Configuration
+In `postgresql.conf`, locate, and add or change the following settings. Settings are disabled by placing a `#` at the start of the line; remove this if present for any of these settings. Ensure that the `port` setting is correct.
+
+The suggested resource allocation values assume a machine with 4GB available and 2 CPUs. Some of these values are set much higher during maintenance, also assuming 4GB is available.
+
+```ini
 # - Connection Settings -
-listen_addresses = '*' # listen to all IP addresses. Controlled further via pg_hba.conf.
-port = myOCDM_Port  # port the server listens on, must be unoccupied by other services
-max_connections = 10  # set lower limit on the number of connections, mostly for resource consumption
+listen_addresses = '*' # Allow external connections. Controlled further in pg_hba.conf.
+port = 5433  # Must not already be in use.
+max_connections = 100  # AD/Kerberos with psqlODBC doesn't pool connections so this needs to be high.
 
 # - Security and Authentication -
-ssl = on  # allow use of ssl
-ssl_cert_file = 'server.crt'  # name of server cert file in data directory (for OCDM)
-ssl_key_file = 'server.key'  # name of server key file in data directory (for OCDM)
-ssl_ca_file = 'root.crt' # name of cert trust chain file in data directory (from OC)
+ssl = on  # allow encrypted connections
+ssl_cert_file = 'server.crt'
+ssl_key_file = 'server.key'
+ssl_ca_file = 'root.crt'
 
 # - Memory -
-shared_buffers = 1024MB  # raised ram for caching (ram / 4)
-temp_buffers = 512MB  # raised ram for temp tables (run/refresh mega queries), (ram / 8)
-work_mem = 256MB  # raised ram for sorting (ram / (2 * max_connections))
-maintenance_work_mem = 512MB  # raised ram for maintenance operations (ram / 8)
+shared_buffers = 512MB  # RAM / 4. On Windows, max 512MB.
+work_mem = 40MB  # RAM / max_connections (default 100).
+maintenance_work_mem = 512MB  # RAM / 8.
+
+# - Asynchronous Behavior - POSTGRES 9.6 AND LATER ONLY
+max_worker_processes = 10		# default 8 (incl. maint), add 2 assuming taken by parallel workers.
+max_parallel_workers_per_gather = 2	# taken from max_worker_processes pool.
 
 # - Checkpoints -
-checkpoint_segments = 128  # raised interval to write a checkpoint, every 128 * 16MB = 2GB
-checkpoint_completion_target = 0.75  # raised target to finish checkpoint when next one 75% complete
+checkpoint_segments = 128  # reduce disk load in exchange for longer crash recovery time.
+checkpoint_completion_target = 0.9  # reduce disk load in exchange for longer crash recovery time.
 
 # - Planner Cost Constants -
-effective_cache_size = 3072MB  # raised estimate of available ram for caching (3/4 available ram)
+effective_cache_size = 3072MB  # (RAM * 3) / 4.
 
 # - Other Planner Options -
-default_statistics_target = 1000  # raised limit for statistics entries for query planning
+default_statistics_target = 1000  # increased for amazing query plans (default 100).
 
 # - Where to Log -
-log_destination = 'csvlog' # log to csv format so logs can be analysed more easily 
+log_destination = 'csvlog' # log to csv format so logs can be analysed more easily.
 logging_collector = on  # enable logging
 log_filename = 'postgresql-%Y-%m-%d.log'  # log daily file names like postgresql-2015-01-20.log
 log_rotation_size = 0  # do not rotate log files based on log file size
@@ -358,31 +289,286 @@ log_duration = on  # log duration of submitted queries
 log_statement = 'all'  # log all submitted statements
 
 # - Lock Management -
-max_locks_per_transaction = 10000 # queries can simultaneously affect more than default 64 tables
+max_locks_per_transaction = 1000  # Refreshing matviews can generate a large amount of locks
 ```
 
 
-### Start the postgres service
-- Open services.msc and start the *postgresql-x64-9.3* service.
+#### OCDM3.2 Connection Methods
+In `pg_hba.conf`, locate, and add or change the settings shown below.
 
-Note that restarting or stopping this service typically causes the pgAgent 
-service to stop as well (if installed). When (re)starting this service (not 
-now, but after setup is complete e.g. for server maintenance), the pgAgent 
-service will need to be started as well.
+The order is important, as connections are checked against these rules in sequence. The first match is attempted, and if that fails, no others are attempted. After a match is satisfied, the authentication method is attempted (e.g. password is checked).
+
+In reference to each row, the settings do the following things.
+
+- Allow unencrypted connections to any database using the "postgres" superuser, from the same machine over IPv4, using a password.
+- Allow unencrypted connections to any database using the DSA user, from the same machine over IPv4, using a password.
+    - Change "DSA" to the local name of your DSA, e.g. "sa-ocdm" from "MYDOMAIN\sa-ocdm".
+- Allow encrypted connections to any database using any username, from the specified IP range, using Active Directory authentication (referring to the map name "mapsspi" in `pg_ident.conf`, allowing only users from the domain "myDomain").
+    - Change "DOMAIN_IP/MASK" to the range the domain users would be connecting from.
+    - Change "MYDOMAIN" to the name of the domain users would be connecting from.
+- Same as above, except demonstrating that it's possible to add extra rows with alternate IP range and mask values. In this example, the apparent IP address of domain users is different when they're connected over a VPN (e.g. working remotely) than when connecting on-site.
+- Same as the first row, except for a local IPv6 address.
+- Same as the second row, except for a local IPv6 address.
+
+```
+# TYPE    DATABASE   USER       ADDRESS          METHOD
+host      all        postgres   127.0.0.1/32     md5
+host      all        DSA        127.0.0.1/32     sspi map=mapsspi include_realm=1 krb_realm=MYDOMAIN
+hostssl   all        all        DOMAIN_IP/MASK   sspi map=mapsspi include_realm=1 krb_realm=MYDOMAIN
+hostssl   all        all        VPN_IP/MASK      sspi map=mapsspi include_realm=1 krb_realm=MYDOMAIN
+host      all        postgres   ::1/128          md5
+host      all        DSA        ::1/128          sspi map=mapsspi include_realm=1 krb_realm=MYDOMAIN
+```
+
+If not using SSPI/Kerberos (or equivalent) for authentication:
+  - Replace the "sspi ..." values in the "METHOD" column. Refer to the postgres documentation for the available methods.
+  - Remove rows 2 and 6, which allow the DSA user to connect.
 
 
-### Create postgres OpenClinica Report Database
-The creation of the database is handled by a package of scripts called 
-*sqldatamart*. A batch file accepts settings for the database which are 
-substituted into the scripts where necessary. The setup needs to be run as a 
-superuser because it requires a 'CREATE EXTENSION' statement for the foreign 
-data wrapper, which can only be executed by superusers.
+#### OCDM3.3 User Mappings
+If not using SSPI/Kerberos for authentication, skip this section.
 
-The build process is controlled by the *dm_build_commands* script. The script 
-includes variables which must be provided to psql during the running of the 
-script. The provided *setup_sqldatamart* Windows batch file sets and passes in 
-the variables. 
+In `pg_ident.conf`, locate, and add or change the settings shown below.
 
-- Edit the *setup_sqldatamart* bat file *set* statements to match the values 
-  relevant to the environment.
-- Run the *setup_sqldatamart* bat file.
+In reference to each column, the settings do the following things.
+
+- "mapname": must match the sspi map name referred to in `pg_hba.conf` for it to be applied. 
+- "system-username": a regular expression for finding the user name in the one provided on connection. This pattern looks for something like `localname@myDomain`, and matches the part before the `@`, which would be `localname`.
+    - Change "myDomain" to the name of the domain users would be connecting from.
+- "pg-username": regular expressions can match multiple pieces of a string. In this case the pattern is only looking for one piece, so the first piece is sent to postgres to see if it matches a valid login role name.
+
+```
+# MAPNAME       SYSTEM-USERNAME         PG-USERNAME
+mapsspi       /^(.*)@myDomain$          \1
+```
+
+An important thing to note about user name mapping is that on Windows, the matching of domain local names to PG role names is always case sensitive. The setting named "krb_caseins_users" in `postgresql.conf` is to allow case insensitivity for GSSAPI authentication (typically on Linux), and has no effect on SSPI on Windows. So it is important that DataMart users log in to the domain using a consistently cased name. DataMart uses first letter capitalised, e.g. "Lstevens".
+
+
+#### OCDM4 Build DataMart
+In the root folder of the DataMart repository (where the LICENSE file is), there is a script named `setup_sqldatamart`. This script initiates the build process and provides configuration values to `dm_build_commands.sql`, which in turn orchestrates the rest of the build process.
+
+Edit the `setup_sqldatamart` script so that all the variables are correct for the deployment environment, then execute the script. As it progresses, it will show output related to each step.
+
+For now, the script is quite simple, so it'll either work perfectly, fail mysteriously, or fail spectacularly. The way to tell between the first two outcomes is to inspect the created database.
+
+[Back to Contents](#contents)
+
+
+### OCDM5 Domain Service Account
+To be able to use SSPI/Kerberos, the OCDM PG server must be run using a domain account. This section describes the necessary configuration steps.
+
+
+#### OCDM5.1 Domain Admin Tasks
+A domain administrator needs to ensure that the account has:
+
+- Privileges to log in to the OCDM machine as a service,
+- A service principal name (SPN) set for OCDM PG.
+    - If configured, clients can use SSPI/Kerberos.
+    - If not configured, clients may be able to use the less secure SSPI/NTLM, if it is available.
+
+An example of the command to set the SPN, which the domain administrator must run, is shown below. The components of this command are:
+
+- `setspn -s`: add a new service principal name to the domain (replace "-s" with "-d" to delete the SPN).
+- `POSTGRES/ocdm.mydomain.org`: the service is called "POSTGRES", and is being run the OCDM server whose FQDN is "ocdm.mydomain.org".
+    - Change this FQDN to the one used in the deployment environment.
+- `MYDOMAIN\sa-ocdm`: the service is being run on the domain "MYDOMAIN" by a user named "sa-ocdm".
+    - Change this to the domain and local name of the one created for this purpose.
+
+```
+setspn -s POSTGRES/ocdm.mydomain.org MYDOMAIN\sa-ocdm
+```
+
+
+#### OCDM5.2 Database Role
+In this step, a user will be created for the DSA to connect to OCDM with. In the previous step [OCDM3.2](#ocdm3-2-connection-methods), local connections for the DSA should have been configured. The DSA will be used to run database maintenance tasks (refer to docs/maintenance). If some other user will be running maintenance tasks, this step can be skipped.
+
+- Connect to the OCDM database as a privileged user and run the following SQL, which creates a role with "dm_admin" permissions. These permissions allow full control of the OCDM database, which is required for maintenance tasks.
+
+```sql
+CREATE ROLE datamart LOGIN
+  NOSUPERUSER INHERIT NOCREATEDB CREATEROLE NOREPLICATION;
+GRANT dm_admin TO datamart;
+```
+
+
+#### OCDM5.3 Database Runner
+To be able to run OCDM PG, the DSA must first have full control of OCDM PGDATA. To set this:
+
+- Right-click PGDATA and choose "Properties",
+- On the "Security" tab, click "Edit", then "Add",
+- For the "Object name", enter the full name of the DSA, click "Check Names", and select the correct record for the user.
+- Click "OK" on each pop-up window until "Properties" is closed.
+
+Next, change the OCDM PG service user to the DSA. To do this on Windows:
+
+- Press the "Windows" key, search for `services.msc`, and click the result (or press Enter).
+- Locate the OCDM PG service, which for example may be named `postgresql-x64-9.6`.
+- Right-click the service name and choose "Properties",
+    - If the service is currently running, click "Stop".
+- On the "Log On" tab, choose "This account", and click "Browse".
+- For the "Object name", enter the full name of the DSA,
+- Click "Check Names", and select the correct record for the user.
+- Complete the the DSA password and confirm password fields.
+- Click "OK" to close "Properties" and exit the service manager.
+
+
+If desired, the database service can be set to perform an action if there is a problem with the service. In that case, in the service properties under "Recovery", choose the recovery option "Run a program". The program to run is selected in the area below the recovery action options. The selected program could be something like a script that notifies an administrator of the problem by sending an email.
+
+
+## Certificate How To's
+This section includes tips relevant to the preparation of certificate files required for encrypted connections.
+
+
+### Prepare the CA certificate
+
+
+#### Background
+When making a encrypted connection, behind-the-scenes activity involves the host server providing it's public certificate to the client. The server certificate is then used to establish a shared secret that will be used to encrypt data sent over the connection. To improve the security of this process, the client should verify that the server host name matches the name on the certificate, and that the server certificate was issued by the trusted third party (a Certificate Authority, or CA) that it claims to have been issued by.
+
+In order to complete this verification, the client needs a copy of the CA public certificate. For greater security, many CA's issue certificates using one or more intermediate certificates. In this case, the client needs to have the root and all intermediate public certificates in order to verify the server certificate.
+
+The operating system and all browsers maintain a list of "trustworthy" CA root and intermediate certificates for users so that all this verification work is transparent. However, like many other server softwares, PostgreSQL (as of 9.6) does not use these trust stores. The CA public certificate(s) must be obtained then provided manually in a plain text format. The collection of CA certificates is sometimes referred to as a "CA bundle".
+
+
+#### Obtaining the CA Bundle
+The CA's website should list the public certificates used for issuing certificates. For example, the CA "QuoVadis" has a [CA Certificate Download page](https://www.quovadisglobal.com/QVRepository/DownloadRootsAndCRL.aspx). 
+
+In Windows, double click the server certificate and view the "Certification Path" tab to find the name of the correct CA certificates to download. Alternatively, inspect the certificate using OpenSSL with the following command:
+
+```
+openssl x509 -in server.crt -noout -text
+```
+
+The required certificate format is "PEM". 
+
+- Create a new text file named `root.crt`.
+- Copy and paste the content of all certificates in the Certification Path, in the issuing order, with the root last, i.e. for the path: Root -> Intermediate -> Server, paste as follows:
+
+```
+-----BEGIN CERTIFICATE-----
+
+... intermediate certificate content ...
+
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+
+... root certificate content ...
+
+-----END CERTIFICATE-----
+```
+
+
+### Get a New Certificate
+Certificate Authority websites usually have detailed information on obtaining certificates. The process is:
+
+- Generate a Certificate Signing Request (CSR). This is submitted to a CA.
+- CA issues a certificate from the CSR: this is the "server.crt" public certificate.
+
+The following is an example OpenSSL command to generate a CSR. Details to change include:
+
+- C=AU : C = Country code; AU = Australia
+- ST=NSW : ST = State code; NSW = New South Wales
+- L=Kensington : L = Locality
+- O=UNSW Australia : O = Organisation
+- OU=KIRBY : OU = Organisational Unit; KIRBY = Kirby Institute
+- CN=ocdm.example.org : CN = Common Name; ocdm.example.org = FQDN (full name) of the server.
+
+```
+C:\OpenSSL-Win32\bin\openssl.exe req -newkey rsa:4096 -sha512 -nodes -subj "/C=AU/ST=NSW/L=Kensington/O=UNSW Australia/OU=KIRBY/CN=ocdm.example.org" -out CSR.csr -keyout server.key
+```
+
+This produces two files:
+
+- `CSR.csr`: the CSR to provide to the CA, and 
+- `server.key`: the server's private key (basically, it's a password. Keep it secret!).
+
+
+### Use Tomcat's Certificate
+If a certificate has already been obtained for the OC Tomcat server using the Java Keytool, it is possible to extract and convert that certificate for use with PostgreSQL. This is only suitable for the OC PG certificate, and is only necessary in deployment Scenario 1 (separate OC / OCDM machines). The conversion process is as follows:
+
+- First, convert the Java keystore into a PKCS12 format using keytool.
+    - This produces a file `intermediate.p12`, which is a format that can then be converted to PEM.
+
+```
+%JAVA_HOME%\bin\keytool.exe -importkeystore -srckeystore tomcat.keystore ^
+  -destkeystore intermediate.p12 -deststoretype PKCS12
+```
+
+- After issuing this command, respond to the prompts as follows.
+    - The "destination keystore password" can be anything, it is only required temporarily.
+    - The "source keystore password" should be in the Tomcat configuration file `server.xml`.
+    - The messages about aliases, e.g. "Problem importing entry for alias xyz" will differ based on the CA and can be ignored.
+
+```
+Enter destination keystore password:
+Re-enter new password:
+Enter source keystore password:
+Problem importing entry for alias qvroot: java.security.KeyStoreException: TrustedCertEntry not supported.
+Entry for alias qvroot not imported.
+Do you want to quit the import process? [no]:  no
+Problem importing entry for alias qvint: java.security.KeyStoreException: TrustedCertEntry not supported.
+Entry for alias qvint not imported.
+Do you want to quit the import process? [no]:  no
+Entry for alias mykey successfully imported.
+Import command completed:  1 entries successfully imported, 2 entries failed or cancelled
+```
+
+- Next, convert the PKCS12 file `intermediate.p12` to a PEM format using OpenSSL.
+    - The password is the "destination keystore password" set above.
+    - This command produces a file named `extracted.pem`, containing the private key, public certificate, and CA certificate chain.
+
+```
+C:\OpenSSL-Win32\bin\openssl.exe pkcs12 -in intermediate.p12 -out extracted.pem -nodes
+WARNING: can't open config file: /usr/local/ssl/openssl.cnf
+Enter Import Password:
+MAC verified OK
+```
+
+- Open `extracted.pem` in Notepad++. In the following steps, sections of this document will be copied into new files.
+- Create a file `server.key` (the private key). Copy and paste in the section from `extracted.pem` that looks like the following:
+
+```
+-----BEGIN PRIVATE KEY-----
+
+... private key content ...
+
+-----END PRIVATE KEY-----
+```
+
+- Verify the `server.key` file in OpenSSL with the following command (no news is good news):
+
+```
+C:\OpenSSL-Win32\bin\openssl.exe rsa -in server.key -noout
+```
+
+- Create a file `server.crt` (the public certificate). Copy and paste in the section from `extracted.pem` that looks like the following:
+    - There will be at least 2 of these sections; take the one that has your server name just above it, e.g. "friendlyName: CN=oc.example.org".
+
+```
+-----BEGIN CERTIFICATE-----
+
+... public certificate content ...
+
+-----END CERTIFICATE-----
+```
+
+- Create a file `root.crt` (the CA certificates). Copy and paste in the section(s) from `extracted.pem` that look like the following:
+    - These should be listed in order of the Certification Path - see above section [Obtaining the CA Bundle](#obtaining-the-ca-bundle).
+    - For example, say there is an intermediate certificate following "friendlyName: CN=QuoVadis Global SSL ICA G2", and then a root certificate following "friendlyName: CN=QuoVadis Root CA 2". These would be copied as follows:
+
+```
+-----BEGIN CERTIFICATE-----
+
+... intermediate certificate content from QuoVadis Global SSL ICA G2 ...
+
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+
+... root certificate content from QuoVadis Root CA 2 ...
+
+-----END CERTIFICATE-----
+```
+
+
+[Back to Contents](#contents)
