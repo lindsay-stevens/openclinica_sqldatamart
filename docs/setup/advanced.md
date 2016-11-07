@@ -414,6 +414,7 @@ Next, change the OCDM PG service user to the DSA. To do this on Windows:
 
 
 If desired, the database service can be set to perform an action if there is a problem with the service. In that case, in the service properties under "Recovery", choose the recovery option "Run a program". The program to run is selected in the area below the recovery action options. The selected program could be something like a script that notifies an administrator of the problem by sending an email.
+[Back to Contents](#contents)
 
 
 ## Certificate How To's
@@ -569,6 +570,5 @@ C:\OpenSSL-Win32\bin\openssl.exe rsa -in server.key -noout
 
 -----END CERTIFICATE-----
 ```
-
 
 [Back to Contents](#contents)
