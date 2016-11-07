@@ -86,6 +86,7 @@ Some PostgreSQL configurations are suggestions relating to improving performance
 - [PG tuning advice for web applications](https://wiki.postgresql.org/wiki/Tuning_Your_PostgreSQL_Server)
 - [PgTune](https://github.com/gregs1104/pgtune)
 
+
 [Back to Contents](#contents)
 
 
@@ -206,6 +207,7 @@ ssl = on
 ```
 ssl_renegotiation_limit = 0
 ```
+
 
 [Back to Contents](#contents)
 
@@ -352,6 +354,7 @@ Edit the `setup_sqldatamart` script so that all the variables are correct for th
 
 For now, the script is quite simple, so it'll either work perfectly, fail mysteriously, or fail spectacularly. The way to tell between the first two outcomes is to inspect the created database.
 
+
 [Back to Contents](#contents)
 
 
@@ -414,6 +417,7 @@ Next, change the OCDM PG service user to the DSA. To do this on Windows:
 
 
 If desired, the database service can be set to perform an action if there is a problem with the service. In that case, in the service properties under "Recovery", choose the recovery option "Run a program". The program to run is selected in the area below the recovery action options. The selected program could be something like a script that notifies an administrator of the problem by sending an email.
+
 [Back to Contents](#contents)
 
 
@@ -570,5 +574,6 @@ C:\OpenSSL-Win32\bin\openssl.exe rsa -in server.key -noout
 
 -----END CERTIFICATE-----
 ```
+
 
 [Back to Contents](#contents)
