@@ -46,7 +46,7 @@ There is a chance that the pgAgent installation may not complete, for example:
 
 
 ### Where to Get the pgAgent Installer
-If using the EDB PostgreSQL distribution, pgAgent is an optional extra that can be installed using the packaged StackBuilder tool. If the pgAgent option was not selected during installation, the StackBuilder tool can be launched from the PostgreSQL installation directory at: ```C:\Program Files\PostgreSQL\9.6\bin\stackbuilder.exe```.
+If using the EDB PostgreSQL distribution (available for Windows or Linux), pgAgent is an optional extra that can be installed using the packaged StackBuilder tool. If the pgAgent option was not selected during installation, the StackBuilder tool can be launched from the PostgreSQL installation directory at: ```C:\Program Files\PostgreSQL\9.6\bin\stackbuilder.exe```.
 
 
 ## Configuration
@@ -109,25 +109,25 @@ To update the pgAgent service command:
 - Run the following command: 
 
 ```
-sc config pgAgent binPath= "C:\Program Files (x86)\pgAgent\bin\pgagent.exe RUN pgAgent -t 600 host=localhost port=5433 dbname=postgres"
+sc config pgAgent binPath= "C:\Program Files (x86)\pgAgent\bin\pgagent.exe RUN pgAgent -t 300 host=localhost port=5433 dbname=postgres"
 ```
 
 
 ### pgAgent Job Definition
 So that pgAgent knows what to do, we must create a job definition in the maintenance database (where pgAgent was installed, by default it is "postgres"). The definition will contain information like the target database details, when to run the jobs, and what steps should be executed.
 
-Job definitions can be created either interactively via pgAdmin, or by loading an SQL script. The following two sections describe how to do both.
+Job definitions can be created either interactively via pgAdmin, or by loading an SQL script. This section describes how to do it via SQL; see the pgAgent documentation for an interactive guide.
 
 
 #### Deciding on Frequency
-There are two main components to defining job frequency:
+There are two main components to deciding job frequency:
 
 - How often will the tasks be executed: defined by a function in job step 2,
 - How often will pgAgent the job: defined by the pgAgent job schedule.
 
-The function is named "dm_create_should_run_maintenance_table", and sets a lower and upper range on refresh frequency. The lower range translates into "how soon after some activity in the live database should DataMart be updated?". The upper range translates into "how old can the most recently updated study schema be before it must be updated?" - this may seem counterintuitive but all study schemas that aren't for locked studies are updated together.
+The function in job step 2 is named "dm_create_should_run_maintenance_table", and sets a lower and upper range on refresh frequency. The lower range translates into "how soon after some activity in the live database should DataMart be updated?". The upper range translates into "how old can the most recently updated study schema data be before it must be updated?". This may seem counterintuitive but all study schemas that aren't for locked studies are updated together.
 
-The job schedule interacts with this and should be nearer to lower end of the frequency range defined in the function. The default configuration is: schedule every 15 minutes, lower range 15 minutes, upper range 2 hours. This means that during active use, DataMart will be updated about every 15 minutes. During idle periods, this falls back down to 2 hours.
+The job schedule interacts with this and should be nearer to lower end of the frequency range defined in the function. The default configuration is: schedule every 15 minutes, lower range 15 minutes, upper range 2 hours. This means that during active use, DataMart will be updated about every 15 minutes (up to 29 minutes, if the pgAgent service was started just after a scheduled job run time). During idle periods, this falls back down to 2 hours.
 
 Selecting a good combination of these intervals requires a little bit of experimentation; considerations include:
 
@@ -137,15 +137,15 @@ Selecting a good combination of these intervals requires a little bit of experim
     - A database with 1 million rows in item_data across 15 studies, with 2 CPUs and 4GB RAM on Windows takes about 5 minutes to complete all maintenance tasks.
 - How often does the data need to be updated?
     - For small OpenClinica instances with few users or studies, it may be acceptable to only update every 3 hours or so, thereby saving server resources. Or due to the smaller amount of data it may be preferable to update every 10 minutes or less.
-    - For very large OpenClinica instances with hundreds of users and studies, depending on the server hardware, there may be some performance impact on the OpenClinica application (untested), which requires a lower frequency.
+    - For very large OpenClinica instances with hundreds of users and studies, depending on the server hardware, it is possible that there may be some performance impact on the OpenClinica application (untested), which requires a lower frequency.
 
 
 #### pgagent Job Definition
 It is possible to create pgAgent job definitions interactively, via the pgAgent interface. However, it is considerably faster to create it using an SQL script. 
 
-The default details must be modified to suit the environment. This can be done in the SQL script before loading it, or the values can be edited interactively in pgAdmin.
+The default details must be modified to suit the environment. These modifications can be done in the SQL script before loading it, or the values can be edited interactively in pgAdmin.
 
-To create the job definition using the SQL script:
+To create the job definition:
 
 - Locate the SQL script at "docs/setup/maintenance_pgagent_config.sql",
 - Update the details in the script, or do so in pgAdmin after loading it,
