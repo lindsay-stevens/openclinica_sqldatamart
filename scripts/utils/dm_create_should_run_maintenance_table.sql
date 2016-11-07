@@ -16,25 +16,23 @@ Description.
 Decides whether maintenance is necessary, based on indications of database 
 activity, and how recently the study schema data was updated. A table created 
 named openclinica_fdw.should_run_maintenance is created which contains the 
-result. The intended use is:
+result. The intended use is as follows (see docs/maintenance_pgagent_config.sql):
 
 - At the start of maintenance, drop the table if it exists,
 - Run this function to evaluate the check and store the results,
 - Execute maintenance tasks only if the "update_needed" field is true.
 
-The motivation for this check is to allow scheduling maintenance at a relatively 
-high frequency (e.g. every 15 minutes), but have it adapt to user activity. The 
-defined tolerance range is 15 minutes to 2 hours. So during periods of sustained 
-use, DataMart will be at most (approx.) 15 minutes behind live; in idle periods 
-updates are reduced to (approx.) 2-hourly since there is nothing significant to 
-update.
+This check allows job checks to occur at a high frequency (pgAgent default is 
+every 60 seconds), but have the refresh parameters defined in the job. The 
+pgAgent service may be maintaining other things in the server cluster, and 
+reducing the check frequency in the service definition would affect all jobs.
 
-The field "update_needed" is true if either or both of the following criteria 
-are met:
+The check table field "update_needed" is true if either or both of the 
+following criteria are met:
 
 - Signs of activity (listed below). Check for the latest of these in both the 
-  live database and the locally cached data. If the latest from the cached 
-  data is more than 30 minutes older than live, this criterion is met.
+  live database and the locally cached data. If the difference is greater than 
+  the interval defined in "cache_age_tolerance_lower", this criterion is met.
     - Study or site created or modified,
     - Event definition created or modified,
     - CRF version (including new CRFs) created or modified,
@@ -43,15 +41,16 @@ are met:
     - Audit log entry added (catches all data entry operations),
     - Discrepancy note thread created or response added,
     - Extract dataset created, modified or run.
-- Check all the study schema timestamp_data values. If the latest of these is 
-  more than 2 hours old, this criterion is met.
+- Check all the study schema timestamp_data values. If the difference between 
+  now and the latest of these timestamps is greater than the interval defined 
+  in "cache_age_tolerance_upper", this criterion is met.
     - In the event that the above doesn't cover all relevant indications 
       of user activity, we can at least be assured that all the data is being 
       refreshed every 2 hours.
     - When a schema is rebuilt, the data is refreshed as well, so we don't need
       perform the same kind of check with the study timestamp_schema views.
 
-The data used in performing this check is sent to the postgres logs.
+Data used in performing this check is sent to the postgres logs.
 
 */
 
