@@ -95,6 +95,12 @@ Next, update the pgAgent binPath to refer to this user, by opening an Administra
 sc config pgAgent binPath= "C:\Program Files (x86)\pgAgent\bin\pgagent.exe RUN pgAgent host=localhost port=5433 user=datamart dbname=postgres"
 ```
 
+If the service was previously running, make sure this change is applied by restarting the service:
+```
+sc stop pgAgent
+sc start pgAgent
+```
+
 
 ### pgAgent Job Check Frequency (Optional)
 By default, pgAgent connects to PostgreSQL every 60 seconds to check for jobs that are scheduled to be executed. If logging all database connections as per the "Advanced" setup, this amount of traffic will generate about 500KB of logs per day. This is especially unnecessary if for example the maintenance frequency is set to run every hour.
@@ -109,7 +115,7 @@ To update the pgAgent service command:
 - Run the following command: 
 
 ```
-sc config pgAgent binPath= "C:\Program Files (x86)\pgAgent\bin\pgagent.exe RUN pgAgent -t 300 host=localhost port=5433 dbname=postgres"
+sc config pgAgent binPath= "C:\Program Files (x86)\pgAgent\bin\pgagent.exe RUN pgAgent -t 600 host=localhost port=5433 user=postgres dbname=postgres"
 ```
 
 
