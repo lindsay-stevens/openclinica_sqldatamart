@@ -1,0 +1,9 @@
+[ODBC]
+DRIVER=PostgreSQL Unicode(x64)
+DATABASE=openclinica_fdw_db
+SERVER=localhost
+PORT=5446
+UID=postgres
+PWD=password
+TextAsLongVarchar=0
+UseDeclareFetch=0

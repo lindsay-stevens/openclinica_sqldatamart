@@ -1,6 +1,6 @@
-local odbc_string_or_file_dsn_path="DRIVER={PostgreSQL Unicode(x64)};DATABASE=openclinica_fdw_db;UID=postgres;PWD=password;SERVER=localhost;PORT=5446;TextAsLongVarchar=0;UseDeclareFetch=0"
+local odbc_string_or_file_dsn_path="FILEDSN=C:\Users\Lstevens\Documents\repos\openclinica\openclinica_sqldatamart\docs\demo\basic_setup_using_juno\ocdm-x64.dsn"
 local data_filter_string=""
-local snapshotdir="C:/Users/Lstevens/Documents/repos/openclinica/openclinica_sqldatamart/docs/demo/basic_setup_using_juno/stata_output"
+local snapshotdir="C:\Users\Lstevens\Documents\repos\openclinica\openclinica_sqldatamart\docs\demo\basic_setup_using_juno\stata_output"
 odbc load, exec("SELECT * FROM the_juno_diabetes_study.av_ig_adver_aelog `data_filter_string'") connectionstring("`odbc_string_or_file_dsn_path'")
 lab var ae_dton "AE Date of Onset"
 lab var ae_sev "AE Severity Grade"
