@@ -23,12 +23,10 @@ To run test build:
     - Currently set to the default install path for 9.6 on Windows 7 x64.
 - Run the script `test_build.bat`.
 
-A copious amount of information will be shown on the console window. To run this more quietly and send the information to a log file, run it like this instead:
- 
-```bat
-call test_build.bat > test_output\test_build_log.txt
-```
+A copious amount of information will be shown on the console window. To run this more quietly and send the information to a log file, run the script `test_build_to_log.bat` instead.:
 
-The test_build script is running the PostgreSQL server process so the window will stay open after the build is completed. The window can be closed if no further investigation or browsing is to be done.
+The test_build script also runs the PostgreSQL server process, so the window will stay open after the build is completed. The window can be closed if no further investigation or browsing is to be done.
 
 There is also the PostgreSQL log file under ".\postgres_data\test_log.txt" to help with debugging.
+
+If you have kdiff3 installed, the script `kdiff_datamart_output.bat` will launch kdiff to compare the new dump file against the known good one.

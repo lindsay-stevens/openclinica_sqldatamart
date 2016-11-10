@@ -53,8 +53,7 @@ call setup_sqldatamart.bat
 @SET pg_database_old=%PGDATABASE%
 @SET PGDATABASE=openclinica_fdw_db
 
-rmdir %test_output_path% /s /q
-mkdir %test_output_path%
+del /F /Q %export_file_path%
 
 psql -f %~dp0util_dm_copy_schema_to_tables_for_export.sql
 psql -c "SELECT %export_func%($s$%target_schema_name%$s$);" -P pager

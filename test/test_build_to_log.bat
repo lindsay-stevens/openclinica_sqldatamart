@@ -1,0 +1,1 @@
+call test_build.bat > %~dp0test_output\test_build_log.txt 2>&1
