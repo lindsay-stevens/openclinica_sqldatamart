@@ -1,9 +1,24 @@
 # Changelog
 
-## (HEAD -> master, tag: 2016.4)
-- [f0f70c1](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/f0f70c1b41127c12b07c18b7307bc5cd01eebcdd) chg: metadata_event_crf_ig distinct add item group
+## (HEAD -> master, nas/master, github/master)
+- [009eb0b](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/009eb0b2aefddeba9cf07fbd51fbf0618ecdb93e) add: basic test script
+- [8484789](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/8484789ec86236dbd39904b767cacca92c1312d7) chg: make demo even easier to do
+- [f489c91](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/f489c911f015cb755598a1c27b039e5430540a26) fix: contents link smushed into previous para
+- [317fd4c](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/317fd4c6d5ceae83e2662d08d0c40a02272179d3) add: missing "back to contents" link
+- [d00319a](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/d00319ab8c45613f942f1dee256a611c98138f2c) fix: contents links to sections
+- [4748ff3](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/4748ff3f502d852988226814d37e073b160ba787) chg: rewrite advanced setup
+- [f88cd9f](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/f88cd9f8f666e358b8f89c88b6d9340a7bf02788) add: user flag to pgagent binpath and restart tip
+- [a0c57b8](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/a0c57b89c4cc835b6936e114370df96842e5cf22) fix: typos in maintenance setup docs
+- [ae1277b](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/ae1277bbc30a795ecbbaf8d80cf41cdcee2aa00c) chg: corrections to func docs
+- [66f80ff](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/66f80ffeff27c70e409413a121bcc14318ce080d) add: missing section in advanced setup re postgres
+- [4164223](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/416422397645eb4823a6e6a16896259df71b1d74) fix: typo in contents list
 
-## (nas/master, github/master)
+## (tag: 2016.5)
+- [0c04a22](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/0c04a22dc53d98c53c7c9fe62876c787431153d3) add: huge improvements to maintenance setup
+- [6facd98](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/6facd981ffca63b4ebf807f6fba017f27199fa24) chg: update version file and changelog
+
+## (tag: 2016.4)
+- [f0f70c1](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/f0f70c1b41127c12b07c18b7307bc5cd01eebcdd) chg: metadata_event_crf_ig distinct add item group
 - [80beb33](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/80beb331e1514bdad9ba8dcb3cf7ffc6ea551338) chg: more documentation tidying
 - [68da42f](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/68da42f5d8c9a61633e168af89e7190c3022f124) chg: documentation updates
 - [895b588](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/895b58836ee8152c6912251317033e5c25aa6d12) add: full demo database archives
