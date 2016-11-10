@@ -1,6 +1,12 @@
 # Changelog
 
-## (HEAD -> master, nas/master, github/master)
+## (HEAD -> master, tag: 2016.6)
+- [8159a98](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/8159a9893fd78ab6dcd9e6082684af38b65b4553) chg: clobber all null codes in non-string items
+- [315d258](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/315d258586027e6bdc7b5001d558d3ebc5d3a867) chg: minor improvements to test build scripts
+
+## (nas/master, github/master)
+- [8ac78fe](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/8ac78feafe756ce7098e3531a1fbd1c61d736022) chg: make formatting less whack
+- [129510e](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/129510ea9e1afbdc9bc426b49c8b850b89fc20ca) doc: update changelog
 - [009eb0b](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/009eb0b2aefddeba9cf07fbd51fbf0618ecdb93e) add: basic test script
 - [8484789](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/8484789ec86236dbd39904b767cacca92c1312d7) chg: make demo even easier to do
 - [f489c91](https://github.com/lindsay-stevens/openclinica_sqldatamart/commit/f489c911f015cb755598a1c27b039e5430540a26) fix: contents link smushed into previous para
