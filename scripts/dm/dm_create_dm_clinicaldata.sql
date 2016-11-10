@@ -133,10 +133,10 @@ CREATE OR REPLACE FUNCTION dm_create_dm_clinicaldata()
             CASE
             WHEN rt.name IN ('checkbox', 'multi-select') AND
                  id.value <> $$$$
-            THEN concat(
+            THEN upper(concat(
                     i.oc_oid,
                     $$_$$,
-                    multi_split.split_value)
+                    openclinica_fdw.dm_clean_name_string(multi_split.split_value)))
             ELSE i.oc_oid
             END                           AS item_oid,
             CASE

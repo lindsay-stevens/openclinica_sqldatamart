@@ -1,7 +1,7 @@
 # Tests
 
 ## Introduction
-At the moment this is a relatively rudimentary test, in that it's only at the level of "did I substantially break it" rather than any specific pass/fail conditions. 
+At the moment this is mostly a relatively rudimentary test at the level of "did I substantially break it" rather than a suite of specific pass/fail conditions. 
 
 The test process will do the following:
  
@@ -13,7 +13,7 @@ The test process will do the following:
 Once this is complete, the JUNO dump file under ".\test_output" can be diffed against a known good copy under ".\fixtures" to investigate brokenness.
 
 
-## Running
+## Running the Test Build
 
 To run test build:
 
@@ -29,4 +29,11 @@ The test_build script also runs the PostgreSQL server process, so the window wil
 
 There is also the PostgreSQL log file under ".\postgres_data\test_log.txt" to help with debugging.
 
-If you have kdiff3 installed, the script `kdiff_datamart_output.bat` will launch kdiff to compare the new dump file against the known good one.
+
+## Running Tests
+There are some tests under "test_cases". To run these:
+
+- Run the test build, leaving the console open so the server is still running,
+- Run the script `run_test_cases.bat`.
+
+If you have kdiff3 installed, the script `kdiff_datamart_output.bat` will launch kdiff to compare the new dump file against a known good one.

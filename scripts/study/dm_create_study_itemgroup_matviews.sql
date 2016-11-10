@@ -181,7 +181,12 @@ FOR r IN
             ELSE lower(
               format(
                 $$%1$s_%2$s$$,
-                substr(dm_clean_name_string(dm_meta.item_name), 1, 12),
+                substr(dm_clean_name_string(
+                  CASE
+                    WHEN substring(dm_meta.item_name from 1 for 1) ~ $r$[^a-zA-z_]$r$
+                      THEN concat($s$_$s$, dm_meta.item_name)
+                    ELSE dm_meta.item_name
+                  END), 1, 12),
                 substr(dm_clean_name_string(dm_meta.item_description), 1, 45)
               )
             )
