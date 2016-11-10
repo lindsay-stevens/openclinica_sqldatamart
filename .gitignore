@@ -1,1 +1,3 @@
 .idea
+test/postgres_data
+test/test_output
