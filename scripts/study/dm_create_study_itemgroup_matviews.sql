@@ -5,7 +5,16 @@ CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_study_itemgroup_matviews(
 RETURNS TEXT AS $b$
 DECLARE
   r RECORD;
+  all_null_values TEXT;
 BEGIN
+
+all_null_values := (
+  SELECT
+    trim(BOTH ',' FROM
+      (array_to_string(array_agg(quote_literal(
+        trim(BOTH ',' FROM
+          (null_value_type."code")))), $$,$$)))
+  FROM openclinica_fdw.null_value_type);
 
 FOR r IN
   WITH use_item_oid AS (
@@ -22,29 +31,7 @@ FOR r IN
     FROM dm.metadata_crf_ig_item AS metadata
     GROUP BY
       study_name
-    ),
-
-  crf_nulls AS (
-    SELECT
-      trim(BOTH ',' FROM
-        (array_to_string(array_agg(quote_literal(
-          trim(BOTH ',' FROM
-            (sub.crf_null_values)))), $$,$$))
-      ) AS crf_null_values,
-      study_name,
-      item_group_oid
-      FROM (
-        SELECT DISTINCT ON (study_name, event_oid, crf_version_oid)
-          metadata.study_name,
-          metadata.item_group_oid,
-          metadata.crf_null_values
-        FROM dm.metadata_event_crf_ig AS metadata
-        WHERE metadata.crf_null_values != $$$$
-      ) AS sub
-      GROUP BY
-        study_name,
-        item_group_oid
-  )
+    )
 
   SELECT
     format(
@@ -84,22 +71,11 @@ FOR r IN
         format(
           $f$ max(
             CASE
-              WHEN item_oid=%1$L then (
-                CASE
-                  WHEN item_value ~ '^[\s]*?$'
-                    THEN NULL
-                  WHEN item_value IN (%2$s)
-                    THEN NULL
-                  ELSE cast(item_value as %3$s)
-                END)
+              WHEN item_oid=%1$L
+               THEN cast(item_value_clean as %2$s)
               ELSE NULL
-            END) as %4$I $f$,
+            END) as %3$I $f$,
           met.item_oid,
-          CASE
-            WHEN met.crf_null_values IS NULL
-              THEN $$''$$
-            ELSE met.crf_null_values
-          END,
           CASE
             WHEN item_data_type IN ($$ST$$, $$PDATE$$, $$FILE$$)
               THEN $$text$$
@@ -118,26 +94,32 @@ FOR r IN
                 WHEN item_oid=%1$L
                   THEN (
                     CASE
-                      WHEN item_value ~ $s$^[\s]*?$$s$
-                        THEN NULL
-                      WHEN item_value IN (%2$s)
+                      WHEN item_value_clean IS NULL
                         THEN NULL
                       ELSE option_text
                     END)
                 ELSE NULL
-              END) as %3$s_label $f$,
+              END) as %2$s_label $f$,
             met.item_oid,
-            CASE
-              WHEN met.crf_null_values IS NULL
-                THEN $$''$$
-              ELSE met.crf_null_values
-            END,
             met.item_name_hint)
         END
       ) AS item_ddl,
       format(
         $f$
-          FROM %1$I.clinicaldata
+          FROM (
+            SELECT
+              *,
+              CASE
+                WHEN item_value ~ $r$^[\s]*?$$r$ /* nullify whitespace */
+                  THEN NULL
+                WHEN item_data_type = $s$ST$s$ /* output non-whitespace strings */
+                  THEN item_value
+                WHEN item_value IN (%3$s) /* nullify null codes in non-strings */
+                  THEN NULL
+                ELSE item_value
+              END AS item_value_clean
+            FROM %1$I.clinicaldata
+          ) as cd
           WHERE item_group_oid=%2$L
           GROUP BY
             study_name, site_oid, site_name, subject_id, event_oid,
@@ -145,7 +127,8 @@ FOR r IN
             crf_version, crf_status, item_group_oid, item_group_repeat;
         $f$,
         dm_clean_name_string(met.study_name),
-        upper(met.item_group_oid)
+        upper(met.item_group_oid),
+        all_null_values
       ) AS ig_ddl,
       item_group_oid,
       study_name,
@@ -185,8 +168,7 @@ FOR r IN
           END) AS item_name_hint,
         item_data_type,
         max(item_form_order) AS item_form_order,
-        max(item_response_set_label) AS item_response_set_label,
-        crf_null_values
+        max(item_response_set_label) AS item_response_set_label
       FROM (
         SELECT
           dm_meta.study_name,
@@ -206,14 +188,10 @@ FOR r IN
           END AS item_name_hint,
           item_data_type,
           item_form_order,
-          item_response_set_label,
-          crf_nulls.crf_null_values
+          item_response_set_label
         FROM dm.metadata_crf_ig_item AS dm_meta
         LEFT JOIN use_item_oid
           ON use_item_oid.study_name = dm_meta.study_name
-        LEFT JOIN crf_nulls
-          ON crf_nulls.study_name = dm_meta.study_name
-          AND crf_nulls.item_group_oid = dm_meta.item_group_oid
         INNER JOIN dm.metadata_study AS dmms
           ON dmms.study_name = dm_meta.study_name
         WHERE
@@ -262,8 +240,7 @@ FOR r IN
         item_oid,
         item_name,
         item_name_hint,
-        item_data_type,
-        crf_null_values
+        item_data_type
       ORDER BY
         study_name,
         item_group_oid,
