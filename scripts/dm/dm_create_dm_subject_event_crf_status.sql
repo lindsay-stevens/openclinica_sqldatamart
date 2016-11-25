@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION dm_create_dm_subject_event_crf_status()
+CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_subject_event_crf_status()
     RETURNS VOID AS
     $BODY$
     BEGIN

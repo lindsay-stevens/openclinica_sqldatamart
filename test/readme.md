@@ -1,39 +1,54 @@
 # Tests
 
 ## Introduction
-At the moment this is mostly a relatively rudimentary test at the level of "did I substantially break it" rather than a suite of specific pass/fail conditions. 
+This document describes how to setup the test environment for development.
 
-The test process will do the following:
- 
-- Create / replace a throwaway database cluster under ".\postgres_data",
-- Load the JUNO demo OpenClinica database,
-- Run the DataMart build script,
-- Dump the schema and data generated for the JUNO study.
+This process can also be used to check if your own OpenClinica database will build successfully, see the section [Test a Database](#test-a-database).
 
-Once this is complete, the JUNO dump file under ".\test_output" can be diffed against a known good copy under ".\fixtures" to investigate brokenness.
+The repository includes a `.idea` directory. This contains settings for Intellij IDEA, including run configurations the test build and test run steps described below.
 
 
-## Running the Test Build
+## Environment Setup
+To prepare the test environment:
 
-To run test build:
+- Install PostgreSQL 9.6+
+- Check that the variables in `pg_env.bat` are OK:
+    - `pg_install_path`: currently the default install path for Windows,
+    - `PGPORT`: the port that the test database will run on.
 
-- Install PostgreSQL 9.6.
-    - 9.3+ might be OK, but latest is best.
-- In "pg_env.bat", check that the variable "pg_install_path" is correct.
-    - Currently set to the default install path for 9.6 on Windows 7 x64.
-- Run the script `test_build.bat`.
 
-A copious amount of information will be shown on the console window. To run this more quietly and send the information to a log file, run the script `test_build_to_log.bat` instead.:
+## Test Build
+To run the test build:
 
-The test_build script also runs the PostgreSQL server process, so the window will stay open after the build is completed. The window can be closed if no further investigation or browsing is to be done.
+- Open a command prompt in the test directory.
+- Run `call setup_test_environment.bat`.
+    - Creates and starts a new test database cluster,
+    - Loads the fixture database specified in the variable `fixture_database`,
+- Run `call setup_sqldatamart.bat`. 
+    - Runs the build process.
+    - For subsequent re-builds, repeat this command.
 
-There is also the PostgreSQL log file under ".\postgres_data\test_log.txt" to help with debugging.
+The test server log file is stored at `.\postgres_data\test_log.txt`. This log file contains all statements issued to the database server, which is useful for debugging.
+
+The test database server will continue running as long as the command prompt stays open. To shutdown the server, run `call stop_test_server.bat`.
 
 
 ## Running Tests
-There are some tests under "test_cases". To run these:
+Complete the following:
 
-- Run the test build, leaving the console open so the server is still running,
-- Run the script `run_test_cases.bat`.
+- Run a test build.
+- Install Python 3.x (Older Python may still work, but use 3.5 or better).
+- Open command prompt in test folder.
+- Create virtual environment: `C:\Python35\python -m venv venv`
+- Activate virtual environment: `call venv\Scripts\activate.bat`
+- Install the requirements: `pip install -r requirements.txt`
+- Run tests: `python -m unittest`.
 
-If you have kdiff3 installed, the script `kdiff_datamart_output.bat` will launch kdiff to compare the new dump file against a known good one.
+
+## Test a Database
+To test a database:
+ 
+- Create a database backup file using pgAdmin or pg_dump,
+- Save the backup file in the `fixtures` folder, named like `study_name.backup`, 
+- Edit `setup_test_environment.bat`, and change the variable `fixture_database` to match the `study_name`.
+- Run a fresh test build.

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectCodeStyleSettingsManager">
+    <option name="PER_PROJECT_SETTINGS">
+      <value>
+        <option name="LINE_SEPARATOR" value="&#10;" />
+        <option name="RIGHT_MARGIN" value="80" />
+        <SqlCodeStyleSettings>
+          <option name="ALIGN_AS_IN_SELECT_STATEMENT" value="false" />
+          <option name="ALIGN_TYPE_IN_CREATE_STATEMENT" value="false" />
+          <option name="NEW_LINE_BEFORE_JOIN_CONDITION" value="true" />
+          <option name="NEW_LINE_BEFORE_OTHER_CLAUSES" value="false" />
+          <option name="INDENT_JOIN" value="false" />
+          <option name="WRAP_INSIDE_JOIN_EXPRESSION" value="5" />
+          <option name="WRAP_INSIDE_GROUP_BY" value="5" />
+          <option name="WRAP_INSIDE_WHERE" value="5" />
+          <option name="WRAP_INSIDE_ORDER_BY" value="5" />
+          <option name="WRAP_INSIDE_ARGUMENT_DEFINITION" value="5" />
+          <option name="WRAP_INSIDE_CALL_EXPRESSION" value="5" />
+        </SqlCodeStyleSettings>
+        <XML>
+          <option name="XML_LEGACY_SETTINGS_IMPORTED" value="true" />
+        </XML>
+        <codeStyleSettings language="SQL">
+          <indentOptions>
+            <option name="CONTINUATION_INDENT_SIZE" value="2" />
+          </indentOptions>
+        </codeStyleSettings>
+      </value>
+    </option>
+    <option name="USE_PER_PROJECT_SETTINGS" value="true" />
+    <option name="PREFERRED_PROJECT_CODE_STYLE" value="Default (2)" />
+  </component>
+</project>

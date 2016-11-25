@@ -118,7 +118,7 @@ DECLARE r record;
 BEGIN
 FOR r IN
   SELECT 
-    $s$GRANT SELECT ON $s$ || relname || $s$ TO openclinica_select;$s$ as grant
+    $s$GRANT SELECT ON $s$ || relname || $s$ TO openclinica_select;$s$ as gnt
   FROM 
     pg_class 
   INNER JOIN pg_namespace 
@@ -127,7 +127,7 @@ FOR r IN
     nspname = 'public' 
     AND relkind IN ('r', 'v')
 LOOP
-    EXECUTE r.grant;
+    EXECUTE r.gnt;
 END LOOP;
 END;$b$ LANGUAGE plpgsql VOLATILE;
 SELECT public.grant_select_on_all_tables_in_schema();
@@ -154,7 +154,6 @@ In `postgresql.conf`, if there is has been no previous performance tuning, the f
 shared_buffers = 512MB  # RAM / 4. On Windows, max 512MB.
 work_mem = 16MB  # RAM / max_connections (default 100).
 maintenance_work_mem = 128MB  # RAM  / 16. Stay below 2GB.
-checkpoint_segments = 32  # reduce disk load in exchange for longer crash recovery time.
 checkpoint_completion_target = 0.7  # reduce disk load in exchange for longer crash recovery time.
 effective_cache_size = 1536MB  # (RAM * 3) / 4.
 default_statistics_target = 200  # increased for better query plans (default 100).

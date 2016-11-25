@@ -16,7 +16,11 @@ Client integration tools are also included:
     - An extension of the above to generate per-site Excel datasets for close-out,
 - A SAS script for generating data export code.
 
-For additional information and installation instructions, please refer to the [docs](docs) directory.
+
+## Installation
+Please only use the latest tagged release from here: https://github.com/lindsay-stevens/openclinica_sqldatamart/releases
+
+For installation instructions and additional information, please refer to the [docs](docs) directory.
 
 
 ## Demo

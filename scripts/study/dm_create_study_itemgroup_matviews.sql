@@ -1,268 +1,40 @@
-CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_study_itemgroup_matviews(
-  alias_views BOOLEAN DEFAULT FALSE,
-  filter_study_name TEXT DEFAULT $$$$ :: TEXT,
-  filter_itemgroup_oid TEXT DEFAULT $$$$ :: TEXT)
-RETURNS TEXT AS $b$
+CREATE OR REPLACE FUNCTION openclinica_fdw.create_study_itemgroup_matviews(
+  IN  alias_views              BOOLEAN DEFAULT FALSE,
+  IN  filter_study_schema_name TEXT DEFAULT $$$$ :: TEXT,
+  IN  filter_item_group_oid    TEXT DEFAULT $$$$ :: TEXT,
+  OUT done_message             TEXT)
+AS $b$
 DECLARE
   r RECORD;
-  all_null_values TEXT;
 BEGIN
 
-all_null_values := (
-  SELECT
-    trim(BOTH ',' FROM
-      (array_to_string(array_agg(quote_literal(
-        trim(BOTH ',' FROM
-          (null_value_type."code")))), $$,$$)))
-  FROM openclinica_fdw.null_value_type);
+  FOR r IN
 
-FOR r IN
-  WITH use_item_oid AS (
-    SELECT
-      study_name,
-      (
-        max(length(metadata.item_name)) > 12
-        OR max(
-          CASE
-            WHEN metadata.item_name ~ $reg$^[0-9].+$$reg$
-              THEN length(metadata.item_name)
-          END) > 0
-      ) AS use_item_oid
-    FROM dm.metadata_crf_ig_item AS metadata
-    GROUP BY
-      study_name
-    )
+  SELECT vd.create_statement
+  FROM dm.study_ig_viewdefs AS vd
+  WHERE
+    CASE
+    WHEN alias_views
+      THEN 'av' = vd.ig_viewtype
+    ELSE 'mv' = vd.ig_viewtype
+    END
+    AND
+    CASE
+    WHEN length(filter_study_schema_name) > 0
+      THEN filter_study_schema_name = vd.study_name_clean
+    ELSE TRUE
+    END
+    AND
+    CASE
+    WHEN length(filter_item_group_oid) > 0
+      THEN filter_item_group_oid = vd.item_group_oid
+    ELSE TRUE
+    END
 
-  SELECT
-    format(
-      $f$CREATE %1$s VIEW %2$I.%3$I AS SELECT study_name, site_oid, site_name,
-        subject_id, event_oid, event_name, event_order, event_repeat,
-        crf_parent_name, crf_version, crf_status, item_group_oid,
-        item_group_repeat, %4$s %5$s $f$,
-      CASE
-        WHEN alias_views
-          THEN $$$$
-        ELSE $$MATERIALIZED$$
-      END,
-      dm_clean_name_string(ddl.study_name),
-      CASE
-        WHEN alias_views
-          THEN concat($$av_$$, ddl.item_group_oid)
-        ELSE ddl.item_group_oid
-      END,
-      array_to_string(
-        array_agg(
-          CASE
-            WHEN alias_views
-              THEN ddl.item_ddl_av
-            ELSE ddl.item_ddl
-          END),
-        $$,$$),
-      CASE
-        WHEN alias_views
-          THEN ddl.ig_ddl_av
-        ELSE ddl.ig_ddl
-      END
-    ) AS create_statement
-  FROM (
-    SELECT
-      format(
-        $f$ %1$s %2$s $f$,
-        format(
-          $f$ max(
-            CASE
-              WHEN item_oid=%1$L
-               THEN cast(item_value_clean as %2$s)
-              ELSE NULL
-            END) as %3$I $f$,
-          met.item_oid,
-          CASE
-            WHEN item_data_type IN ($$ST$$, $$PDATE$$, $$FILE$$)
-              THEN $$text$$
-            WHEN item_data_type IN ($$INT$$, $$REAL$$)
-              THEN $$numeric$$
-            ELSE item_data_type
-          END,
-          met.item_name_hint
-        ),
-        CASE
-          WHEN met.item_response_set_label IS NULL
-            THEN NULL
-          ELSE format(
-            $f$ , max(
-              CASE
-                WHEN item_oid=%1$L
-                  THEN (
-                    CASE
-                      WHEN item_value_clean IS NULL
-                        THEN NULL
-                      ELSE option_text
-                    END)
-                ELSE NULL
-              END) as %2$s_label $f$,
-            met.item_oid,
-            met.item_name_hint)
-        END
-      ) AS item_ddl,
-      format(
-        $f$
-          FROM (
-            SELECT
-              *,
-              CASE
-                WHEN item_value ~ $r$^[\s]*?$$r$ /* nullify whitespace */
-                  THEN NULL
-                WHEN item_data_type = $s$ST$s$ /* output non-whitespace strings */
-                  THEN item_value
-                WHEN item_value IN (%3$s) /* nullify null codes in non-strings */
-                  THEN NULL
-                ELSE item_value
-              END AS item_value_clean
-            FROM %1$I.clinicaldata
-          ) as cd
-          WHERE item_group_oid=%2$L
-          GROUP BY
-            study_name, site_oid, site_name, subject_id, event_oid,
-            event_name, event_order, event_repeat, crf_parent_name,
-            crf_version, crf_status, item_group_oid, item_group_repeat;
-        $f$,
-        dm_clean_name_string(met.study_name),
-        upper(met.item_group_oid),
-        all_null_values
-      ) AS ig_ddl,
-      item_group_oid,
-      study_name,
-      format(
-        $f$ %1$s %2$s $f$,
-        format(
-          $f$ %1$s AS %2$s $f$,
-          met.item_name_hint,
-          met.item_name
-        ),
-        CASE
-          WHEN met.item_response_set_label IS NULL
-            THEN NULL
-          ELSE format(
-            $f$ , %1$s_label AS %2$s_label $f$,
-            met.item_name_hint,
-            met.item_name)
-        END
-      ) AS item_ddl_av,
-      format(
-        $f$ FROM %1$I.%2$I;$f$,
-        dm_clean_name_string(met.study_name),
-        met.item_group_oid
-      ) AS ig_ddl_av,
-      item_form_order
-    FROM (
-      SELECT
-        study_name,
-        lower(item_group_oid) AS item_group_oid,
-        item_oid,
-        lower(item_name) AS item_name,
-        lower(
-          CASE
-            WHEN length(item_name_hint) > 57
-              THEN substr(item_name_hint, 1, 57)
-            ELSE item_name_hint
-          END) AS item_name_hint,
-        item_data_type,
-        max(item_form_order) AS item_form_order,
-        max(item_response_set_label) AS item_response_set_label
-      FROM (
-        SELECT
-          dm_meta.study_name,
-          dm_meta.item_group_oid,
-          item_oid,
-          item_name,
-          CASE
-            WHEN use_item_oid.use_item_oid
-              THEN item_oid
-            ELSE lower(
-              format(
-                $$%1$s_%2$s$$,
-                substr(dm_clean_name_string(
-                  CASE
-                    WHEN substring(dm_meta.item_name from 1 for 1) ~ $r$[^a-zA-z_]$r$
-                      THEN concat($s$_$s$, dm_meta.item_name)
-                    ELSE dm_meta.item_name
-                  END), 1, 12),
-                substr(dm_clean_name_string(dm_meta.item_description), 1, 45)
-              )
-            )
-          END AS item_name_hint,
-          item_data_type,
-          item_form_order,
-          item_response_set_label
-        FROM dm.metadata_crf_ig_item AS dm_meta
-        LEFT JOIN use_item_oid
-          ON use_item_oid.study_name = dm_meta.study_name
-        INNER JOIN dm.metadata_study AS dmms
-          ON dmms.study_name = dm_meta.study_name
-        WHERE
-          EXISTS(
-            SELECT n.nspname
-            FROM pg_namespace AS n
-            WHERE n.nspname = dmms.study_name_clean
-          )
-          AND NOT EXISTS(
-            SELECT n.nspname AS schemaname
-            FROM pg_class AS c
-            LEFT JOIN pg_namespace AS n
-              ON n.oid = c.relnamespace
-            WHERE
-              c.relkind = (
-                CASE
-                  WHEN alias_views
-                    THEN $$v$$
-                  ELSE $$m$$
-                END)
-              AND dmms.study_name_clean = n.nspname
-              AND c.relname = (
-                CASE
-                  WHEN alias_views
-                    THEN format($$av_%1$s$$, lower(dm_meta.item_group_oid))
-                  ELSE lower(dm_meta.item_group_oid)
-                END)
-            ORDER BY c.oid
-          )
-          AND (
-            CASE
-              WHEN length(filter_study_name) > 0
-                THEN dm_meta.study_name = filter_study_name
-              ELSE TRUE
-            END)
-          AND (
-            CASE
-              WHEN length(filter_itemgroup_oid) > 0
-                THEN dm_meta.item_group_oid = filter_itemgroup_oid
-              ELSE TRUE
-            END)
-      ) AS namecheck
-      GROUP BY
-        study_name,
-        item_group_oid,
-        item_oid,
-        item_name,
-        item_name_hint,
-        item_data_type
-      ORDER BY
-        study_name,
-        item_group_oid,
-        item_form_order,
-        item_name
-    ) AS met
-  ) AS ddl
-  GROUP BY
-    ddl.study_name,
-    ddl.item_group_oid,
-    ddl.ig_ddl,
-    ddl.ig_ddl_av
+  LOOP
+    EXECUTE r.create_statement;
+  END LOOP;
 
-LOOP
-  EXECUTE r.create_statement;
-END LOOP;
-
-RETURN $$done$$;
+  done_message := $s$done$s$;
 
 END$b$ LANGUAGE plpgsql VOLATILE;

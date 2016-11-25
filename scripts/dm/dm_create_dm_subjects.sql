@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION dm_create_dm_subjects()
+CREATE OR REPLACE FUNCTION openclinica_fdw.dm_create_dm_subjects()
     RETURNS VOID AS
     $BODY$
     BEGIN

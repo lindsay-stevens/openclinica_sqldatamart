@@ -123,7 +123,7 @@ VALUES
       RESET ROLE;
       BEGIN;
       SELECT openclinica_fdw.dm_run_command_if_maintenance_needed($c$
-        SELECT openclinica_fdw.dm_create_study_role();$c$);
+        SELECT openclinica_fdw.dm_create_study_roles();$c$);
       COMMIT;
       BEGIN;
       SELECT openclinica_fdw.dm_run_command_if_maintenance_needed($c$

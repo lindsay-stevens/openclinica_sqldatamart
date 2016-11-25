@@ -47,11 +47,11 @@ RETURNS VOID AS
 $$DECLARE r record;
 BEGIN
 FOR r IN
-    SELECT 'GRANT SELECT ON ' || relname || ' TO openclinica_select;' as grant
+    SELECT 'GRANT SELECT ON ' || relname || ' TO openclinica_select;' as gnt
     FROM pg_class JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace
     WHERE nspname = 'public' AND relkind IN ('r', 'v')
 LOOP
-    EXECUTE r.grant;
+    EXECUTE r.gnt;
 END LOOP;
 END;$$
 LANGUAGE plpgsql VOLATILE;

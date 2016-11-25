@@ -1,1 +1,0 @@
-start "" "C:\Program Files\TortoiseHg\kdiff3.exe" fixtures\juno_schema_datamart.backup test_output\the_juno_diabetes_study.backup
