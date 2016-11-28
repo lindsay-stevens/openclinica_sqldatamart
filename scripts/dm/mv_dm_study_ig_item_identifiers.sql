@@ -95,7 +95,7 @@ FROM (
     mcii_trim.item_group_id,
     mcii_trim.item_ordinal_per_ig_over_crfv,
     mcii_trim.item_multi_order_over_rsi,
-    mcii_trim.crf_version_id
+    mcii_trim.crf_version_id DESC
 ) AS base_ident
 INNER JOIN dm.metadata_study AS ms
   ON ms.study_id = base_ident.study_id
