@@ -26,6 +26,7 @@ CREATE OR REPLACE VIEW dm.study_ig_viewdefs AS
                 sic.event_repeat,
                 sic.crf_parent_name,
                 sic.crf_version,
+                sic.crf_version_oid,
                 sic.crf_status,
                 sic.item_group_oid,
                 sic.item_group_repeat,
@@ -55,6 +56,7 @@ CREATE OR REPLACE VIEW dm.study_ig_viewdefs AS
               event_repeat,
               crf_parent_name,
               crf_version,
+              crf_version_oid,
               crf_status,
               item_group_oid,
               item_group_repeat,
@@ -64,8 +66,9 @@ CREATE OR REPLACE VIEW dm.study_ig_viewdefs AS
       $f$ FROM study_ig_clinicaldata
           GROUP BY
             study_name, site_oid, site_name, subject_id, event_oid, event_name,
-            event_order, event_repeat, crf_parent_name, crf_version, crf_status,
-            item_group_oid, item_group_repeat; $f$ :: TEXT AS group_footer,
+            event_order, event_repeat, crf_parent_name, crf_version,
+            crf_version_oid, crf_status, item_group_oid,
+            item_group_repeat; $f$ :: TEXT AS group_footer,
       $f$ max(
             CASE
               WHEN item_id=%1$s AND item_multi_order_over_rsi %2$s
