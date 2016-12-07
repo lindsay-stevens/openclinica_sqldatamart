@@ -82,10 +82,10 @@ FROM (
     SELECT
       mcii_max_calc_sub.study_id,
       max(length(mcii_max_calc_sub.item_name)) > 12 AS use_item_oid,
-      /* mv = main views (for postgres, access) */
-      63 AS mv_trim,
-      /* av = alias views (for stata, sas) */
-      32 AS av_trim
+      /* mv = main views (for postgres, access): 63 (max) - 6 (_label) = 57 */
+      57 AS mv_trim,
+      /* av = alias views (for stata, sas): 32 (max) - 6 (_label) = 26*/
+      26 AS av_trim
     FROM study_ig_metadata AS mcii_max_calc_sub
     GROUP BY mcii_max_calc_sub.study_id
   ) AS which_base
