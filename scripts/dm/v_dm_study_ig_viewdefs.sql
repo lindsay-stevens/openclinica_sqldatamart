@@ -61,7 +61,7 @@ CREATE OR REPLACE VIEW dm.study_ig_viewdefs AS
               item_group_oid,
               item_group_repeat,
               jsonb_object_agg(av_ident_final, data_text)
-                FILTER (WHERE cast_failure IS NOT NULL) AS cast_failures,
+                FILTER (WHERE cast_failure) AS cast_failures,
             %5$s %6$s $f$ :: TEXT AS group_header,
       $f$ FROM study_ig_clinicaldata
           GROUP BY
@@ -100,7 +100,8 @@ CREATE OR REPLACE VIEW dm.study_ig_viewdefs AS
           ddl.study_name_clean,
           ddl.item_group_id,
           ddl.item_ordinal_per_ig_over_crfv,
-          ddl.item_multi_order_over_rsi NULLS FIRST), chr(44)),
+          ddl.item_multi_order_over_rsi NULLS FIRST,
+          ddl.column_sequence), $$,$$),
       (SELECT group_footer
        FROM format_strings)
     ) AS create_statement,
@@ -128,7 +129,8 @@ CREATE OR REPLACE VIEW dm.study_ig_viewdefs AS
                   cols.item_group_id
                 ORDER BY
                   cols.item_ordinal_per_ig_over_crfv,
-                  cols.item_multi_order_over_rsi),
+                  cols.item_multi_order_over_rsi NULLS FIRST,
+                  cols.column_sequence),
               0,
               200000,
               1000) AS item_group_bucket,
